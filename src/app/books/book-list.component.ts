@@ -10,45 +10,65 @@ import { BookItemComponent } from './book-item.component';
   standalone: true,
   imports: [CommonModule, FormsModule, BookItemComponent],
   template: `
-    <div class="container mx-auto px-4 py-12 max-w-7xl">
-      <h1 class="text-3xl font-bold mb-10 text-blue-700 border-b pb-4 border-gray-200">Book Collection</h1>
+    <div class="page-shell">
+      <div class="mb-8 sm:mb-10">
+        <p class="eyebrow mb-3">The reading room</p>
+        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-ink">Book Collection</h1>
+        <p class="mt-4 max-w-xl text-base leading-relaxed text-muted">
+          Find your next perspective. Explore the collection, follow your curiosity, and take a closer look.
+        </p>
+      </div>
 
-      <div class="mb-6">
-        <div class="flex items-center border-b-2 border-gray-300 py-2">
+      <div class="mb-8 sm:mb-10">
+        <label for="book-search" class="mb-2 block text-sm font-medium text-ink">Search the collection</label>
+        <div
+          class="flex items-center gap-3 rounded-2xl border border-line bg-surface-raised px-4 py-1 shadow-card focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15"
+        >
+          <svg
+            aria-hidden="true"
+            class="h-5 w-5 shrink-0 text-accent"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+          >
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path stroke-linecap="round" d="m16 16 4 4" />
+          </svg>
           <input
+            id="book-search"
             type="text"
             [(ngModel)]="searchTerm"
             (ngModelChange)="onSearchChange()"
             placeholder="Search for books..."
-            class="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none"
+            class="min-w-0 w-full appearance-none border-none bg-transparent py-4 text-base text-ink placeholder:text-muted focus:outline-none"
           />
-          <button *ngIf="searchTerm" (click)="clearSearch()" class="flex-shrink-0 text-gray-500 hover:text-gray-700">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button *ngIf="searchTerm" (click)="clearSearch()" aria-label="Clear search" class="icon-button">
+            <svg aria-hidden="true" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
       </div>
 
-      <div *ngIf="loading" class="flex justify-center items-center py-20">
-        <div class="animate-pulse flex flex-col items-center">
+      <div *ngIf="loading" role="status" class="status-panel">
+        <div class="flex flex-col items-center">
           <div
-            class="h-16 w-16 rounded-full border-4 border-t-blue-700 border-r-blue-700 border-b-gray-200 border-l-gray-200 animate-spin"
+            aria-hidden="true"
+            class="h-10 w-10 rounded-full border-2 border-line border-t-accent animate-spin"
           ></div>
-          <p class="mt-4 text-gray-600">Loading books...</p>
+          <p class="mt-4 text-muted">Loading books...</p>
         </div>
       </div>
 
-      <div *ngIf="!loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-8">
+      <div *ngIf="!loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <app-book-item *ngFor="let book of books; trackBy: trackById" [book]="book"></app-book-item>
 
-        <div
-          *ngIf="books.length === 0"
-          class="col-span-full flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-xl"
-        >
+        <div *ngIf="books.length === 0" role="status" class="col-span-full status-panel">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-16 w-16 text-gray-400 mb-4"
+            aria-hidden="true"
+            class="h-12 w-12 text-accent mb-5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -60,19 +80,13 @@ import { BookItemComponent } from './book-item.component';
               d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
             />
           </svg>
-          <p class="text-xl font-medium text-gray-600 mb-2">
+          <p class="text-xl font-semibold text-ink mb-2">
             {{ searchTerm ? 'No books match your search' : 'No books available' }}
           </p>
-          <p class="text-gray-500">
+          <p class="text-muted">
             {{ searchTerm ? 'Try different search terms or clear the search' : 'Check back later' }}
           </p>
-          <button
-            *ngIf="searchTerm"
-            (click)="clearSearch()"
-            class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200"
-          >
-            Clear Search
-          </button>
+          <button *ngIf="searchTerm" (click)="clearSearch()" class="button-primary mt-6">Clear Search</button>
         </div>
       </div>
     </div>

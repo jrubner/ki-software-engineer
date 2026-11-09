@@ -12,6 +12,10 @@
   <br>
 </p>
 
+## Architecture
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the current application structure, dependencies, data flow, and known limitations.
+
 ## Local Development
 
 | Command       | Description                                      |

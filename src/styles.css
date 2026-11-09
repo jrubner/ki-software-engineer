@@ -1,1 +1,134 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-canvas: #e2e8f0;
+  --color-surface: #f8fafc;
+  --color-surface-raised: #ffffff;
+  --color-surface-soft: #f1f5f9;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-line: #cbd5e1;
+  --color-accent: #0f766e;
+  --color-accent-hover: #115e59;
+  --color-accent-soft: #ccfbf1;
+  --color-on-accent: #ffffff;
+  --color-danger: #9f1239;
+  --color-danger-soft: #fff1f2;
+  --color-danger-line: #fecdd3;
+  --radius-panel: 1.5rem;
+  --radius-card: 1rem;
+  --shadow-card: 0 2px 4px rgb(15 23 42 / 3%), 0 12px 32px -16px rgb(15 23 42 / 22%);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    background: var(--color-canvas);
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --color-canvas: #020617;
+    --color-surface: #0f172a;
+    --color-surface-raised: #1e293b;
+    --color-surface-soft: #172337;
+    --color-ink: #f1f5f9;
+    --color-muted: #94a3b8;
+    --color-line: #334155;
+    --color-accent: #5eead4;
+    --color-accent-hover: #99f6e4;
+    --color-accent-soft: #134e4a;
+    --color-on-accent: #042f2e;
+    --color-danger: #fda4af;
+    --color-danger-soft: #32131e;
+    --color-danger-line: #881337;
+    --shadow-card: 0 2px 4px rgb(0 0 0 / 10%), 0 12px 32px -16px rgb(0 0 0 / 50%);
+  }
+
+  body {
+    margin: 0;
+    color: var(--color-ink);
+    background: var(--color-canvas);
+    font-family: 'Roboto', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  app-root {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+  }
+
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+
+  a,
+  button,
+  input {
+    outline-color: var(--color-accent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-hover);
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 sm:py-14;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-accent;
+  }
+
+  .surface-panel {
+    @apply rounded-panel border border-line bg-surface shadow-card;
+  }
+
+  .text-link {
+    @apply rounded-sm font-medium text-accent underline decoration-accent/30 underline-offset-4 hover:text-accent-hover hover:decoration-accent;
+  }
+
+  .button-primary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover;
+  }
+
+  .icon-button {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-soft hover:text-ink;
+  }
+
+  .status-panel {
+    @apply flex flex-col items-center justify-center rounded-panel border border-line bg-surface px-6 py-16 text-center;
+  }
+
+  .book-metadata dt {
+    @apply mb-1 text-xs font-medium uppercase tracking-wider text-muted;
+  }
+
+  .book-metadata dd {
+    @apply text-sm font-medium leading-relaxed text-ink;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

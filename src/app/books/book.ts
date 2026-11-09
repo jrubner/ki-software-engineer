@@ -10,4 +10,6 @@ export interface Book {
   cover: string;
   abstract: string;
   userId: number;
+  publishedAt?: string;
+  coAuthors?: string[];
 }

@@ -1,15 +1,49 @@
-<header class="bg-white shadow">
-  <div class="container mx-auto px-4 py-6">
-    <h1 class="text-3xl font-bold text-blue-600">BookMonkey</h1>
+<header class="border-b border-line bg-surface">
+  <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-5 sm:px-8">
+    <a routerLink="/" aria-label="BookMonkey home" class="flex items-center gap-3 rounded-lg">
+      <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-ink text-accent-soft">
+        <svg
+          aria-hidden="true"
+          class="h-6 w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 5.5C9 3.8 5.5 4 3 5v14c2.5-1 6-1.2 9 .5m0-14c3-1.7 6.5-1.5 9-.5v14c-2.5-1-6-1.2-9 .5m0-14v14"
+          />
+        </svg>
+      </span>
+      <span class="text-xl font-bold tracking-tight text-ink">BookMonkey<span class="text-accent">.</span></span>
+    </a>
+    <div class="flex items-center gap-6">
+      <span class="hidden text-sm text-muted lg:block">A little curiosity. A good book.</span>
+      <select
+        aria-label="Color theme"
+        [value]="theme.preference()"
+        (change)="changeTheme($event)"
+        class="min-h-11 rounded-xl border border-line bg-surface-raised px-3 py-2 text-sm font-medium text-ink"
+      >
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
   </div>
 </header>
 
-<main>
+<main class="flex-1">
   <router-outlet></router-outlet>
 </main>
 
-<footer class="bg-gray-100 mt-12">
-  <div class="container mx-auto px-4 py-6">
-    <p class="text-center text-gray-600 text-sm">© 2023 BookMonkey App - Angular Workshop by workshops.de</p>
+<footer class="border-t border-line">
+  <div
+    class="mx-auto flex max-w-7xl flex-col gap-2 px-5 py-7 text-xs leading-relaxed text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8"
+  >
+    <span class="font-semibold tracking-wide text-ink">BookMonkey</span>
+    <span>Angular Workshop by workshops.de</span>
   </div>
 </footer>
