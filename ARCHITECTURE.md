@@ -51,7 +51,19 @@ Likewise, `@angular/ssr`, `@angular/platform-server`, and Express are declared, 
 | [public/](public/)                                                                   | Static assets copied by the Angular build                                                                  |
 | [tests/](tests/), [tests-examples/](tests-examples/)                                 | BookMonkey feature tests plus Playwright samples; only `tests/` is selected by the current configuration   |
 
-The structure groups the book feature under `books/` and a reusable helper under `shared/`. Components are standalone; there is no application NgModule. The [route configuration](src/app/app.routes.ts) imports the list and detail components directly, so no lazy-loaded feature boundary is configured. Why the original structure was chosen is not documented in the reviewed files; the detail feature follows it to keep this change scoped.
+The structure groups the book feature under `books/` and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. The list and detail components keep their larger views in colocated [book-list.component.html](src/app/books/book-list.component.html) and [book-detail.component.html](src/app/books/book-detail.component.html) files; request/state logic remains in the TypeScript components. The shorter card view remains inline. The [route configuration](src/app/app.routes.ts) imports the list and detail components directly, so no lazy-loaded feature boundary is configured. Why the original structure was chosen is not documented in the reviewed files; the detail feature follows it to keep this change scoped.
+
+## Agent instructions and refactoring review
+
+[AGENTS.md](AGENTS.md) defines project-wide constraints and an explicitly invoked refactoring workflow. [src/AGENTS.md](src/AGENTS.md) adds source conventions; [src/app/books/AGENTS.md](src/app/books/AGENTS.md) records book-specific contracts. Reading these files does not automatically start the workflow. [REFACTORING.md](REFACTORING.md) records concrete findings, retained design choices, deferred search risks, and verification for the user-authorized workshop task. Personal machine configuration is not part of these repository instructions.
+
+### Refactoring verification (2026-11-09)
+
+- Extracted the list and detail templates without changing component logic, bindings, styles, or UI text. The extraction checked exact content before formatting; final review compared both templates after identical Angular formatting and verified that replacing the template declaration is the only TypeScript change.
+- `node node_modules/@angular/cli/bin/ng.js build --configuration development` passed. `npm.cmd run build` passed with network access for the existing Google Fonts integration; initial bundle 408.91 kB, within the configured budget.
+- `node node_modules/@playwright/test/cli.js test tests/book-detail.spec.ts tests/theme.spec.ts --project=chromium --workers=1 --reporter=line` passed all 13 existing cases. No new behavior or test dependency was added.
+- The existing frontend returned HTTP 200 and was reused. The sandbox initially blocked the local socket check; the same read outside the sandbox succeeded. VS Code Debug MCP tools were unavailable; no service was started, stopped, or restarted.
+- Formatting and final diff checks passed. No screenshot checks were performed, as requested. Firefox/WebKit and the historically blocked Karma setup were not run; this refactoring does not resolve the deferred list lifecycle risks.
 
 ## Runtime and data flow
 
@@ -90,6 +102,22 @@ The entire card in [BookItemComponent](src/app/books/book-item.component.ts) is 
 Success renders bibliographic data, optional publication date and nonempty co-authors. Price stays a string as supplied by the API; descriptions use escaped text interpolation. Missing or failed covers use a placeholder, and cover failure state resets for a new ISBN. Every state includes a real router link back to `/`, independent of browser history. The implementation adds no dependencies and leaves the existing list/search lifecycle unchanged.
 
 ## Build, local services, and styling
+
+### Scrolling shell (2026-11-09)
+
+The root shell retains native `header`, `main`, and `footer` landmarks. [AutoHideHeaderDirective](src/app/shared/auto-hide-header.directive.ts) controls the header's visibility separately from theme and book logic. [app.css](src/app/app.css) positions the header sticky at the viewport top, above content, and slides it out with a transform without removing its layout space. The header stays visible within the first 160 px of scroll; beyond that, 28 px of cumulative travel in one direction hides it downward or reveals it upward. Small direction changes do not flicker the header. Moving a mouse or pen into the top 12 px reveals it; hovering or focusing inside the header keeps it open. Touch interaction uses scroll direction instead of hover. Route navigation reveals the header again.
+
+Passive scroll/pointer listeners run outside Angular's zone and update a visibility signal only as needed; listeners and the router subscription are cleaned up on destruction. Focus remains keyboard-accessible even when visually hidden. The footer now has an explicit themed surface and remains in normal document flow: after long content and at the viewport bottom on short pages through the existing flex shell.
+
+Animation correction (2026-11-09): the existing browser reported `prefers-reduced-motion: reduce`, which shortened the original transform transition to 0.01 ms through the global motion reset. The header now uses a native 320 ms transform transition with an ease-out curve for normal motion. Reduced motion uses a brief 120 ms opacity transition without spatial movement; its narrowly scoped duration overrides the global reset. Invisible headers in this mode do not intercept pointer input, while keyboard focus reveals navigation. This follows Angular's [CSS state transition guidance](https://angular.dev/guide/animations/css); the persistent header does not enter or leave the DOM and needs no new animation dependency.
+
+After this animation correction, the development build and `npm.cmd run build` passed (production initial bundle 412.50 kB). The full Chromium command below passed 21 cases, including two new tests that inspect actual interpolated animation states during hiding and revealing in both motion modes. Existing hover, focus, routing, theme, book, and mobile regressions passed. A read of the existing browser confirmed the effective `opacity 0.12s ease-out` transition under reduced motion. Formatting and diff checks passed. The existing server returned HTTP 200 and was reused; VS Code Debug MCP tools were unavailable, and no service was started or stopped. No screenshots were taken; other browser engines remain untested.
+
+Hover-exit correction (2026-11-09): leaving the header now hides it again when scrolled beyond 160 px, without requiring another scroll event. Leaving the top-edge reveal region before the animation finishes is also handled. Focus inside the header prevents hiding; once focus leaves and the pointer is outside, hiding resumes. Near the page top the header stays visible. The earlier implementation only cleared the hover flag on pointer exit and incorrectly left the header visible until another scroll.
+
+After this correction, the development and production builds passed (production initial bundle 412.11 kB). The same full Chromium command below passed 19 cases, including two added regressions for hover exit without scrolling, rapid exit during reveal, top-of-page visibility, and focus retention/release. Formatting and diff checks also passed.
+
+Verification: development build and `npm.cmd run build` passed (production initial bundle 411.00 kB). `node node_modules/@playwright/test/cli.js test tests/book-detail.spec.ts tests/theme.spec.ts tests/shell.spec.ts --project=chromium --workers=1 --reporter=line` passed all 17 Chromium cases. The four new shell cases cover overlap without layout shift, scroll direction, top-edge reveal and hover hold, keyboard focus, navigation, narrow layout and reduced motion, and footer placement on long/short pages. Tests use controlled book API responses. The existing server was reused after a successful HTTP 200 check; no service was started or stopped. No screenshots or manual browser checks were performed for this change. Other browser engines remain untested.
 
 The [README](README.md) documents `npm install`, `npm start`, and a separately started `npx bookmonkey-api` on port 4730. The API URL is hard-coded in the service; no environment-based endpoint selection or proxy is configured.
 
