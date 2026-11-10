@@ -8,6 +8,13 @@
 - Follow the more specific instructions under `src/` and the book feature without duplicating their rules here.
 - Keep personal skills, credentials, machine-specific paths, browser profiles, and MCP configuration out of the repository. Respect the user's current service/browser instructions.
 
+## Task branches and pull requests
+
+- Use a separate branch for each task. Before editing, create a descriptive task branch from `main`, or continue on the existing branch dedicated to that task. Do not implement tasks directly on `main`; preserve unrelated uncommitted work.
+- Complete the requested changes and applicable verification, then ask the user whether the task should be merged into `main` through a GitHub pull request. Include a brief summary of the changes and actual verification results so the decision is reviewable.
+- After the user agrees, commit the task changes, push the task branch, and create a pull request on GitHub targeting `main`. This approval authorizes those steps. Return the pull request link; merge it only when the user explicitly authorizes the merge.
+- If the user declines or has not answered, keep the work on the task branch without committing, pushing, or creating a pull request unless those actions were separately requested.
+
 ## Explicitly invoked refactoring workflow
 
 Reading this file does not start a refactoring review or authorize code changes. Run the following workflow only when the user explicitly requests a refactoring review, application of `REFACTORING.md`, or implementation of an agreed refactoring plan in chat.
