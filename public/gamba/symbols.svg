@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="gold" x2=".8" y2="1"><stop stop-color="#ffe5a0"/><stop offset=".5" stop-color="#d6a448"/><stop offset="1" stop-color="#9a6225"/></linearGradient>
+    <linearGradient id="blue" x2="1" y2="1"><stop stop-color="#4fa4ae"/><stop offset="1" stop-color="#173b60"/></linearGradient>
+  </defs>
+  <symbol id="book" viewBox="0 0 100 100">
+    <path d="M25 18 70 10 83 71 36 88 20 78Z" fill="#d8be87" stroke="#7b4b20" stroke-width="3"/>
+    <path d="m20 15 48-7 15 63-49 14Z" fill="#81412b" stroke="#d4a34c" stroke-width="3"/>
+    <path d="m29 23 32-5 10 46-33 11Z" fill="#4b2c23" stroke="#d4a34c" stroke-width="2"/>
+    <path d="m26 16 14 65" stroke="#e1b664" stroke-width="3"/>
+    <path d="m39 46 9-13 14 9-9 15Z" fill="url(#gold)"/>
+    <circle cx="51" cy="45" r="4" fill="#246e7e"/>
+    <path d="m39 64 23-7M39 29l17-3" stroke="#dfb664" stroke-width="2"/>
+    <path d="m40 86 4 7 5-10" fill="#aa382c"/>
+  </symbol>
+  <symbol id="pharaoh" viewBox="0 0 100 100">
+    <path d="M50 8C26 8 16 30 18 55L11 79l24 10 15-9 15 9 24-10-7-24C84 30 74 8 50 8Z" fill="url(#gold)" stroke="#986627" stroke-width="2"/>
+    <path d="M30 24 20 78m14-47L29 82m41-58 10 54M66 31l5 51" stroke="#28597b" stroke-width="5"/>
+    <path d="M33 30c0-17 34-17 34 0v22c0 16-10 23-17 25-7-2-17-9-17-25Z" fill="#e5b76e" stroke="#a06d30" stroke-width="2"/>
+    <path d="m35 44 10 2m10 0 10-2" stroke="#263e51" stroke-width="3"/>
+    <path d="m50 46-3 12h6m-10 8h14" fill="none" stroke="#ac7540" stroke-width="2"/>
+    <path d="m45 73 5 18 5-18" fill="#245b73" stroke="#ba8a3b" stroke-width="2"/>
+    <path d="m45 23 5-12 5 12" fill="#2c6a82"/>
+  </symbol>
+  <symbol id="scarab" viewBox="0 0 100 100">
+    <circle cx="50" cy="21" r="11" fill="url(#gold)" stroke="#a4742e" stroke-width="2"/>
+    <path d="M40 46C24 27 10 33 9 42c2 18 14 29 32 28M60 46c16-19 30-13 31-4-2 18-14 29-32 28" fill="url(#blue)" stroke="#b59143" stroke-width="2"/>
+    <path d="m14 43 23 13m-18-3 19 10m48-20L63 56m18-3L62 63" stroke="#cfad64" stroke-width="2"/>
+    <ellipse cx="50" cy="60" rx="16" ry="25" fill="url(#blue)" stroke="#d3b36b" stroke-width="3"/>
+    <path d="M50 37v45M38 49h24" stroke="#d6ba76" stroke-width="2"/>
+    <path d="m36 66-9 14m37-14 9 14M41 82l-5 7m23-7 5 7" stroke="#a77c32" stroke-width="3"/>
+  </symbol>
+  <symbol id="ankh" viewBox="0 0 100 100">
+    <path d="M50 12c-22 0-25 32 0 36 25-4 22-36 0-36Zm0 9c12 0 13 18 0 20-13-2-12-20 0-20Z" fill="url(#gold)" stroke="#996826" stroke-width="2"/>
+    <path d="M44 45H24v12h20l-3 32h18l-3-32h20V45H56" fill="url(#gold)" stroke="#996826" stroke-width="2"/>
+    <path d="M48 52h4v30h-4Z" fill="#f7dda0"/>
+    <circle cx="50" cy="51" r="5" fill="#277b8b" stroke="#f1d88a"/>
+  </symbol>
+</svg>

@@ -1,0 +1,44 @@
+.reel-pending {
+  box-shadow: inset 0 0 32px #edb73675;
+}
+.reel-pending::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: #dc9f3526;
+  box-shadow: inset 0 0 0 2px #efc35780;
+}
+.reel-focused::after {
+  background: #ffe7a343;
+  box-shadow:
+    inset 0 0 0 4px #ffe5a0,
+    inset 0 0 50px #ffbf58b0;
+  animation: anticipation-glow 650ms ease-in-out infinite alternate;
+}
+.anticipating .reel-frame {
+  box-shadow: 0 0 32px #e8b45a90;
+}
+.scatters-celebrating .symbol-cell[data-symbol='ivoris'] {
+  background: radial-gradient(ellipse, #fff1b0, #f6cd6480 70%);
+  box-shadow:
+    inset 0 0 0 2px #ffdc78,
+    inset 0 0 35px #ffd974;
+}
+.scatters-celebrating .symbol-cell .scatter-icon {
+  filter: drop-shadow(0 0 10px #fff7b8) drop-shadow(0 0 18px #e2a52f);
+}
+@keyframes anticipation-glow {
+  to {
+    background: #ffe7a315;
+    box-shadow:
+      inset 0 0 0 3px #f3c66a,
+      inset 0 0 24px #e2a52f80;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reel-focused::after {
+    animation: none;
+  }
+}

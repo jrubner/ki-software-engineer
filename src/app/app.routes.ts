@@ -5,5 +5,10 @@ import { BookDetailComponent } from './books/book-detail.component';
 export const routes: Routes = [
   { path: '', component: BookListComponent },
   { path: 'books/:isbn', component: BookDetailComponent },
+  {
+    path: 'gamba',
+    loadComponent: () => import('./gamba/gamba.component').then(module => module.GambaComponent),
+    title: 'Book of CK | BookMonkey'
+  },
   { path: '**', redirectTo: '' }
 ];

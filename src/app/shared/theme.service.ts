@@ -10,6 +10,8 @@ export class ThemeService {
   private readonly media = this.window?.matchMedia('(prefers-color-scheme: dark)');
   private readonly currentPreference = signal<ThemePreference>('system');
   readonly preference = this.currentPreference.asReadonly();
+  private readonly currentDark = signal(false);
+  readonly isDark = this.currentDark.asReadonly();
 
   constructor() {
     this.update(this.readPreference());
@@ -36,6 +38,10 @@ export class ThemeService {
     }
   }
 
+  toggle(): void {
+    this.setPreference(this.isDark() ? 'light' : 'dark');
+  }
+
   private readPreference(): ThemePreference {
     try {
       const stored = this.window?.localStorage.getItem('bookmonkey-theme');
@@ -54,6 +60,7 @@ export class ThemeService {
   private apply(): void {
     const preference = this.currentPreference();
     const dark = preference === 'dark' || (preference === 'system' && this.media?.matches);
-    this.document.documentElement.dataset['theme'] = dark ? 'dark' : 'light';
+    this.currentDark.set(Boolean(dark));
+    this.document.documentElement.dataset['theme'] = this.isDark() ? 'dark' : 'light';
   }
 }

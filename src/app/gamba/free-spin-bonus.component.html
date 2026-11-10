@@ -1,0 +1,74 @@
+<dialog
+  #dialog
+  class="bonus-dialog"
+  aria-labelledby="bonus-title"
+  aria-describedby="bonus-description"
+  (cancel)="$event.preventDefault(); close()"
+>
+  <div class="bonus-content">
+    <div class="sparks" aria-hidden="true">✦ <span>✧</span> ✦ <span>✧</span> ✦</div>
+    <p class="bonus-eyebrow">A NEW CHAPTER UNLOCKED</p>
+    <img class="bonus-icon" src="/gamba/ivoris-icon.svg" alt="" />
+    <h2 id="bonus-title">{{ retrigger() ? '10 more free spins!' : '10 free spins!' }}</h2>
+    <p id="bonus-description">
+      {{
+        retrigger()
+          ? 'Your adventure continues. Keep your expanding symbol.'
+          : 'Spin the bonus reel to discover your expanding symbol.'
+      }}
+    </p>
+    <div class="selection-machine">
+      <div
+        class="selection-window"
+        [class.selected]="phase() === 'ready'"
+        role="img"
+        [attr.aria-label]="
+          phase() === 'ready' ? 'Selected expanding symbol: ' + symbol(selected()).label : 'Choosing expanding symbol'
+        "
+      >
+        <div #selectionTrack class="selection-track" aria-hidden="true">
+          @for (
+            id of phase() === 'selecting' ? strip() : phase() === 'ready' ? finalSymbols() : preview;
+            track $index
+          ) {
+            <div class="selection-symbol">
+              @if (id === 'book' || id === 'pharaoh' || id === 'scarab' || id === 'ankh') {
+                <svg viewBox="0 0 100 100"><use [attr.href]="'/gamba/symbols.svg#' + id" /></svg>
+              } @else {
+                <span>{{ symbol(id).glyph }}</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      <span class="selection-pointer" aria-hidden="true">▶</span>
+      <span class="selection-pointer right" aria-hidden="true">◀</span>
+    </div>
+    <p class="selected-name" role="status">
+      {{
+        phase() === 'ready'
+          ? symbol(selected()).label + ' · your expanding symbol'
+          : phase() === 'selecting'
+            ? 'Selecting your symbol…'
+            : '+10 FREE SPINS · SPIN TO SELECT'
+      }}
+    </p>
+    <button type="button" class="bonus-continue" (click)="close()">
+      {{
+        phase() === 'ready'
+          ? retrigger()
+            ? 'Continue free spins'
+            : 'Start free spins'
+          : phase() === 'selecting'
+            ? 'Stop selection'
+            : retrigger()
+              ? 'Reveal symbol'
+              : '↻ SPIN FOR SYMBOL'
+      }}
+    </button>
+    <p class="bonus-hint">Your bet stays locked. Every free spin costs 0 credits.</p>
+    @if (autoplay()) {
+      <button type="button" class="stop-autoplay" (click)="stopAutoplay.emit()">Stop autospin</button>
+    }
+  </div>
+</dialog>

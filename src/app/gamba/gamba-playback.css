@@ -1,0 +1,93 @@
+.playback-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 0 4px;
+  color: #d6c39e;
+  font-size: 12px;
+}
+.playback-controls button,
+.playback-controls select {
+  border: 1px solid #c69f5c80;
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: #f4e7cf;
+  background: #233645;
+  min-height: 38px;
+}
+.playback-controls label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.playback-controls button:hover:not(:disabled) {
+  background: #3d4b4f;
+}
+.playback-controls :disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.auto-button {
+  margin-left: auto;
+}
+.auto-message {
+  flex-basis: 100%;
+  font-size: 10px;
+  color: #b6bcb8;
+}
+.is-fullscreen .auto-message {
+  flex-basis: auto;
+  margin-left: auto;
+}
+@media (max-width: 680px) {
+  .playback-controls {
+    gap: 8px;
+    font-size: 10px;
+  }
+  .playback-controls button,
+  .playback-controls select {
+    padding: 6px 8px;
+  }
+  .playback-controls label {
+    gap: 6px;
+  }
+  .auto-button {
+    margin-left: 0;
+  }
+  .is-fullscreen .auto-message {
+    display: none;
+  }
+  .is-fullscreen .slot-cabinet {
+    padding: 10px;
+  }
+}
+@media (max-height: 600px) and (min-width: 681px) {
+  .is-fullscreen .game-heading {
+    position: absolute;
+    right: 16px;
+    top: 10px;
+    z-index: 2;
+  }
+  .is-fullscreen .game-heading .back-link,
+  .is-fullscreen .demo-badge {
+    display: none;
+  }
+  .is-fullscreen .cabinet-top {
+    padding-right: 150px;
+  }
+  .is-fullscreen .bonus-dashboard {
+    margin-bottom: 6px;
+    padding: 6px;
+  }
+  .is-fullscreen .meter small,
+  .is-fullscreen .cabinet-bottom {
+    display: none;
+  }
+  .is-fullscreen .spin-button {
+    height: 44px;
+  }
+  .is-fullscreen .controls {
+    padding: 5px 0;
+  }
+}
