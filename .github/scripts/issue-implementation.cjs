@@ -213,7 +213,7 @@ async function publish({ github, context, core, env = process.env }) {
     if (tree.sha === commit.tree.sha) throw new Error('No source changes were produced.');
     const { data: created } = await github.rest.git.createCommit({
       ...context.repo,
-      message: `Issue #${number} automatisch umsetzen`,
+      message: `feat(issue-${number}): Anforderung automatisch umsetzen`,
       tree: tree.sha,
       parents: [env.BASE_SHA]
     });
@@ -223,16 +223,18 @@ async function publish({ github, context, core, env = process.env }) {
       ...context.repo,
       base: env.BASE_BRANCH,
       head: branchName(number),
-      title: `Issue #${number}: ${current.issue.title}`.slice(0, 240),
+      title: `feat(issue-${number}): ${current.issue.title}`.slice(0, 240),
       body:
         `Closes #${number}\n\nAutomatisch mit Codex (\`gpt-5.6-luna\`) umgesetzt.\n\n${result.report}\n\n` +
-        `Unabhängig geprüft: Development- und Production-Build, Anwendungsregressionen und neue Playwright-Tests.\n\n[Workflow-Nachweis](${run})\n\nReview und Merge stehen aus.`
+        `Unabhängig geprüft: Development- und Production-Build, Anwendungsregressionen und neue Playwright-Tests.\n\n` +
+        `### Review\n\n- [ ] Akzeptanzkriterien und Testabdeckung prüfen\n- [ ] Code und Änderungen prüfen\n` +
+        `- [ ] Workflow-Nachweise und Einschränkungen prüfen\n\n[Workflow-Nachweis](${run})\n\nReview und Merge stehen aus.`
     });
     url = pr.html_url;
   }
   const body =
     `${marker}\n## Codex implementation: ${result.status}\n\n${result.report}\n\n` +
-    `${url ? `Pull request: ${url}\n\n` : 'No PR created. The issue remains open; review the evidence or clarify the requirement before retrying.\n\n'}` +
+    `${url ? `Branch: \`${branchName(number)}\`\n\nCommit: \`feat(issue-${number}): Anforderung automatisch umsetzen\`\n\nPull request: ${url}\n\n` : 'No PR created. The issue remains open; review the evidence or clarify the requirement before retrying.\n\n'}` +
     `[Workflow run](${run}) · Model: \`gpt-5.6-luna\``;
   const existingComment = current.comments.find(
     comment => comment.user?.login === 'github-actions[bot]' && comment.body?.startsWith(marker)
