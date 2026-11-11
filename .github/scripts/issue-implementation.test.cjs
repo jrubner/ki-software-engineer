@@ -22,7 +22,7 @@ const blocked = JSON.stringify({ status: 'blocked', report: 'Which persistence A
 
 function fixture({
   permission = 'write',
-  labels = ['ready-for-implementation'],
+  labels = ['ready-for-implementation', 'implementation-approved'],
   state = 'open',
   actor = 'maintainer',
   eventName = 'issues',
@@ -173,6 +173,7 @@ test('checks access, issue readiness, PR kind, and discussion completeness befor
     { permission: 'read' },
     { state: 'closed' },
     { labels: [] },
+    { labels: ['ready-for-implementation'] },
     { labels: ['ready-for-implementation', 'needs-clarification'] }
   ]) {
     const f = fixture(options);
@@ -252,6 +253,7 @@ test('refuses unverified, changed, no-longer-ready, or stale-base output before 
   for (const options of [
     { state: 'closed' },
     { labels: [] },
+    { labels: ['ready-for-implementation'] },
     { labels: ['ready-for-implementation', 'needs-clarification'] }
   ]) {
     const f = fixture(options);

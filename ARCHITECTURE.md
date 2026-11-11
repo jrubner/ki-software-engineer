@@ -88,13 +88,14 @@ GitHub writes. The issue-analysis job reads an issue and source with a read-only
 token and sandbox; a separate publisher validates structured output and checks
 the issue revision before updating its own comment and two workflow-owned labels.
 All workflows using the repository's OpenAI key explicitly select `gpt-5.6-luna`.
-Ready analysis results explicitly dispatch the implementation workflow; a
-maintainer can also apply `ready-for-implementation` or manually dispatch it.
+Ready analysis results dispatch implementation only when a maintainer has also
+applied `implementation-approved`. Both labels are required for manual starts
+and are rechecked before publication; analysis cannot grant approval.
 Implementation uses the tracked phase skills on a GitHub-hosted runner with a
 workspace-writing, network-enabled permission profile and an unprivileged user.
 The agent receives no GitHub write token. A fresh runner validates bounded text
-file output, reconstructs the changes, and runs both builds and application
-Playwright tests. A separate publisher rechecks issue readiness, requirement
+file output, reconstructs the changes, and runs Angular unit tests, both builds,
+and application Playwright tests. A separate publisher rechecks approval, issue readiness, requirement
 fingerprint, source revision, and verification digest before creating a branch
 and PR through the Git data API. PR merge remains a human action; `Closes #N`
 defers issue closure until merge. See the workflow documentation for supported
@@ -274,3 +275,19 @@ When changing architecture, review this document in the same change as the imple
 Run relevant builds and application-specific tests when behavior changes, and record commands, outcomes, and limits. External-site sample tests cannot substitute for BookMonkey coverage. Review architectural intent and unresolved contract questions with a maintainer; do not fill gaps with assumptions. This document has no automated synchronization or assigned maintenance owner.
 
 Before future AI-assisted reviews, confirm the approved service and repository scope with the team, exclude credentials and sensitive data, and share only the necessary material. No organization-specific approval policy or data-handling compliance was verified by this technical review.
+
+### Workshop remediation checks (2026-11-11)
+
+The explicitly authorized unit-test repair adds the missing Karma/Jasmine development
+packages for the existing Angular 20 builder and four HTTP contract tests in
+`src/app/books/book-api-client.service.spec.ts`. Headless Chrome passed all four;
+a temporarily incorrect expected page size produced the expected failing assertion
+and was restored. This supersedes the historical missing-runner finding below
+without changing its dated evidence. Automation guards passed 37 tests, and the
+existing browser suite passed 21 cases. Development and production builds passed.
+
+`repository-validation.yml` adds deterministic, secret-free PR validation. The
+implementation verifier also runs unit tests. Both preparation and publication
+require the maintainer-controlled `implementation-approved` label in addition to
+readiness; analysis cannot authorize implementation. Workflows pin verified action
+commits and Ubuntu 24.04. These changes remain pending until their new PR is merged.

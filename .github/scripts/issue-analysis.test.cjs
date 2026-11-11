@@ -147,7 +147,7 @@ test('bounds discussion context but still locates older bot comments for updates
 });
 
 test('explicitly dispatches ready issues after publishing analysis, but never clarification results', async () => {
-  const f = fixture();
+  const f = fixture({ issue: { labels: ['implementation-approved'] } });
   await publishing(f, {
     CODEX_REPORT: JSON.stringify({ label: 'ready-for-implementation', report: 'Criteria are complete.' })
   });
@@ -163,7 +163,7 @@ test('explicitly dispatches ready issues after publishing analysis, but never cl
 });
 
 test('does not dispatch new requirements that arrived while publishing the analyzed requirement', async () => {
-  const f = fixture();
+  const f = fixture({ issue: { labels: ['implementation-approved'] } });
   f.github.rest.issues.createComment = async args => {
     f.writes.push({ method: 'createComment', args });
     const { data } = await f.github.rest.issues.get();
@@ -176,4 +176,16 @@ test('does not dispatch new requirements that arrived while publishing the analy
     f.writes.map(write => write.method),
     ['addLabels', 'createComment']
   );
+});
+
+test('publishes readiness without authorizing or dispatching implementation', async () => {
+  const f = fixture();
+  await publishing(f, {
+    CODEX_REPORT: JSON.stringify({ label: 'ready-for-implementation', report: 'Criteria are complete.' })
+  });
+  assert.deepEqual(
+    f.writes.map(write => write.method),
+    ['addLabels', 'createComment']
+  );
+  assert.deepEqual(f.writes[0].args.labels, ['ready-for-implementation']);
 });

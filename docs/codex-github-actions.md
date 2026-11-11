@@ -124,12 +124,16 @@ Every paid Codex call explicitly uses `gpt-5.6-luna` with `OPENAI_API_KEY`.
    never approves or merges them. No additional secret or broader PAT is needed.
 2. Plan a feature with `j-feature-delivery` in chat. To keep planning separate
    from execution, request a draft only: **Plan this feature and prepare its issue
-   draft; do not create the issue or start implementation yet.** Creating an
-   issue can now lead directly from a ready analysis to implementation.
+   draft; do not create the issue or start implementation yet.** Issue creation
+   starts analysis; readiness alone does not authorize implementation.
 3. After agreeing the plan, request issue creation and GitHub implementation.
-   The existing analysis sets `ready-for-implementation` and explicitly queues
-   implementation when the requirement is complete. Alternatively, a maintainer
-   can apply that label to an existing, agreed issue. Public issue authors cannot
+   A maintainer explicitly applies `implementation-approved` to authorize code
+   generation and PR preparation. Create that repository label if necessary.
+   Analysis sets `ready-for-implementation` and queues implementation only when
+   the approval label is also present. Applying approval to an already-ready
+   issue also starts preparation. Both labels are checked again before publishing;
+   removing approval stops publication. Manual retries require both labels too.
+   Public issue authors cannot
    start paid implementation merely by opening an issue or commenting.
 4. Open **Actions → Issue Implementation with Codex**. Follow the **prepare**,
    **implement**, **verify**, and **publish** jobs. The implementation comment
@@ -147,7 +151,7 @@ cause has been resolved. This is event-driven automation, not a periodic scan.
 
 ### Delivery and trust boundaries
 
-- Preparation verifies maintainer access, current issue state, readiness, and
+- Preparation verifies maintainer access, explicit `implementation-approved`, current issue state, readiness, and
   absence of `needs-clarification`. An analysis-bot dispatch requires a matching
   requirement fingerprint. Duplicate implementation PRs and existing
   `codex/issue-N` branches are skipped before another paid request.
@@ -165,7 +169,7 @@ cause has been resolved. This is event-driven automation, not a periodic scan.
   generation job has only repository read permission. Codex is the last step.
 - Codex returns structured UTF-8 file contents, not commands for the publisher.
   A fresh job validates the schema and paths, installs trusted base dependencies,
-  reconstructs the files, runs development and production builds, and runs every
+  reconstructs the files, runs Angular unit tests, development and production builds, and runs every
   application Playwright spec under `tests/`, excluding `tests/example.spec.ts`.
   New browser specs are included. No secrets or GitHub write token are given to
   this job. These checks do not replace human review of acceptance coverage.
@@ -182,8 +186,10 @@ plus root `ARCHITECTURE.md`, `REFACTORING.md`, and `README.md`. Instruction file
 skills, workflows, dependency/configuration changes, binary assets, and symlinks
 require a separate maintainer change. Handoffs are limited to 30 files and
 100,000 UTF-8 bytes, including the report; larger requirements must be split.
-The repository's historical Karma problem remains a blocker for requirements
-that need unavailable unit-test infrastructure; it is not silently repaired.
+The existing Angular 20 Karma builder has explicit Jasmine/Karma development
+dependencies and HTTP contract tests. Run it with
+`npm test -- --watch=false --browsers=ChromeHeadless`. Infrastructure failures
+remain blockers; the agent cannot change dependencies or hide failed tests.
 
 A blocked or already-satisfied result creates an evidence comment and leaves the
 issue open without a PR. Invalid output, failed checks, API errors, and stale
@@ -222,8 +228,9 @@ performed during this review.
    and supported Playwright coverage. The workshop's React/Tailwind dark-mode
    sample is illustrative; this Angular application already has dark mode.
    Do not create a duplicate feature merely to obtain a code-changing PR.
-3. Apply `ready-for-implementation` as a maintainer, or manually dispatch the
-   implementation workflow with the issue number and an empty fingerprint.
+3. Apply both `ready-for-implementation` and `implementation-approved` as a
+   maintainer, or manually dispatch with both labels already present, the issue
+   number, and an empty fingerprint.
 4. Inspect all four jobs and the issue comment. A new requirement should produce
    a `codex/issue-N` branch and a PR with a conventional title, review checklist,
    test evidence, and `Closes #N`. The issue must remain open until merge.
@@ -407,3 +414,25 @@ require a billing or limit change rather than repeated retries.
 - [Workshop issue analysis task](https://workshops.de/classroom/9007582545/tasks/1584)
 - [Workshop pull request review task](https://workshops.de/classroom/9007582545/tasks/1586)
 - [Workshop skill baseline](https://github.com/workshops-de/angular-workshop-agentic-ai-engineering/tree/solution--agentic-workflows-skills/.claude/skills)
+
+## Repository validation and merge policy
+
+`.github/workflows/repository-validation.yml` runs on ordinary pull requests,
+`main` pushes, and manual dispatch. Its stable job name is `Repository validation`.
+It uses a read-only token, does not receive API keys, and checks automation guards,
+Angular unit tests, both builds, and all application browser specs. External
+Playwright website samples are excluded. PR code runs only on disposable hosted
+runners without publishing permissions. Bot-created PR runs can require approval
+in GitHub; approve those checks rather than substituting an AI review for CI.
+
+All workflows use Ubuntu 24.04 and verified full commit pins for checkout v6,
+setup-node v6, github-script v8, and codex-action v1. The Node.js 22 application
+runtime remains compatible with Angular 20; the JavaScript actions use Node.js 24.
+Action pins need deliberate maintenance, not silent major upgrades.
+
+After the validation job has run successfully, protect `main` with required PRs
+and the `Repository validation` check, prohibit force pushes and deletion, and
+require resolution of review conversations. A solo-maintainer repository need not
+require an unavailable second human approval. AI comments never count as approval.
+New workflows become the default-branch configuration only after their PR is
+merged; a passing PR run does not mean the workflow is already installed on main.

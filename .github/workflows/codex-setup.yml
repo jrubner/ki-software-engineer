@@ -13,7 +13,7 @@ concurrency:
 jobs:
   codex:
     name: Check Codex connectivity
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       report: ${{ steps.codex.outputs.final-message }}
@@ -29,7 +29,7 @@ jobs:
           fi
 
       - name: Check out the selected revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
 
@@ -45,7 +45,7 @@ jobs:
       # Keep Codex last; publish its output in a fresh job.
       - name: Run Codex setup check
         id: codex
-        uses: openai/codex-action@v1
+        uses: openai/codex-action@1d82a3dba7c7988ec71ecae1ed5b8e8db96495c5 # v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-5.6-luna
@@ -57,12 +57,12 @@ jobs:
   report:
     name: Publish setup report
     needs: codex
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions: {}
     steps:
       - name: Write the run summary
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           CODEX_REPORT: ${{ needs.codex.outputs.report }}
         with:
