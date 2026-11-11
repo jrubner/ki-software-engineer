@@ -49,4 +49,4 @@ Return a concise report in the conversation's language:
 - Exact verification commands and actual results, distinguishing focused tests, regressions, builds, and blocked or unexecuted checks.
 - Remaining limitations or the next scoped step, if any.
 
-Stop when the agreed behavior and applicable checks are complete. Green does not automatically start refactoring, update issues, commit, push, or create a pull request; follow existing repository instructions and explicit user authorization for those actions.
+Stop this phase when the agreed behavior and applicable checks are complete. When called from an explicitly authorized overall workflow, return control to that workflow so it can continue within its existing authorization. Green alone does not automatically start refactoring, update issues, commit, push, or create a pull request; follow existing repository instructions and explicit user authorization for those actions.

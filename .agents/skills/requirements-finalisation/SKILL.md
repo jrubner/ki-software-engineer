@@ -7,6 +7,8 @@ description: Verify an implemented feature against its agreed acceptance criteri
 
 Finish an implemented requirement with evidence and traceability. Creating or editing this skill does not start finalisation or authorize a GitHub write.
 
+This skill requires an agreed requirement and an implemented feature to verify, not prior invocation of a particular skill. Use available Red, Green, and Blue handoffs as evidence, checking them against the current state. If the calling workflow requires all those phases, honor its gates; when invoked on its own, do not invent a requirement to run them first.
+
 ## Recover the delivery contract
 
 - Read the agreed user story, original acceptance criteria, and explicit later amendments. Use [context-recovery](../context-recovery/SKILL.md) if the active requirement or issue is missing. Resolve material contradictions with the user; do not derive acceptance criteria from whatever the implementation happens to do.

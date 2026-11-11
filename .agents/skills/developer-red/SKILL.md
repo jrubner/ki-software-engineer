@@ -54,4 +54,4 @@ Return a concise report in the conversation's language:
 - Cases already satisfied and any blocked tests or infrastructure limitations.
 - The smallest implementation outcome needed next, without writing that implementation.
 
-Stop after the Red handoff. Invoking this skill does not authorize the Green phase, issue writes, commits, pushes, or pull requests.
+Stop this phase after the Red handoff. When called from an explicitly authorized overall workflow, return control to that workflow so it can continue within its existing authorization. Invoking Red alone does not authorize the Green phase, issue writes, commits, pushes, or pull requests.

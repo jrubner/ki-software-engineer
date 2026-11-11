@@ -45,15 +45,14 @@ Check that every acceptance criterion follows from the user's answers or an expl
 
 ## Offer to create a GitHub issue
 
-After the user has confirmed the complete requirement and all material decisions are resolved, explicitly ask whether to create a GitHub issue from it. Agreement on the requirement alone is not approval to publish it. If the user requests corrections, incorporate them and settle the definition before offering creation.
+After the user has confirmed the complete requirement and all material decisions are resolved, use existing explicit authorization to create the issue, or ask for it if missing. Agreement on the requirement alone is not approval to publish it. If the user requests corrections, incorporate them and settle the definition before offering creation.
 
-Before asking, prepare a concrete issue title and body from the agreed user story, scope, acceptance criteria, and technical notes. Determine the target GitHub repository from verified repository metadata or the user's explicit destination. Show the destination and proposed content, or refer to the exact final definition already visible in the conversation. Do not guess the repository if the remotes are missing, ambiguous, or point to a different service.
+Before creation or asking for missing authorization, prepare a concrete issue title and body from the agreed user story, scope, acceptance criteria, and technical notes. Determine the target GitHub repository from verified repository metadata or the user's explicit destination. Show the destination and proposed content, or refer to the exact final definition already visible in the conversation. Do not guess the repository if the remotes are missing, ambiguous, or point to a different service.
 
-- Ask a direct question such as: "Should I create this agreed requirement as a GitHub issue in OWNER/REPO?"
-- Wait for an explicit answer. If the user declines or has not answered, leave the requirement in chat and do not create an issue.
+- If creation is not already explicitly authorized, ask a direct question such as: "Should I create this agreed requirement as a GitHub issue in OWNER/REPO?" Wait for an explicit answer; if the user declines or has not answered, leave the requirement in chat and do not create an issue.
 - On approval, use an available GitHub connector or authenticated CLI to create the issue in that repository using the agreed content. Follow applicable issue templates without adding unagreed requirements. Set labels, assignees, or project membership only when requested or required by an applicable repository workflow.
-- If an issue was already linked as the active requirement, do not silently duplicate or update it. Clarify the intended issue action before writing.
+- If an issue was already linked as the active requirement, do not silently duplicate or update it. Use the explicitly requested issue action, or clarify it before writing if unclear.
 - Read back the created issue and return its URL and number for subsequent skills. If a write times out or has an unclear result, check for the issue before retrying to avoid duplicates.
 - If GitHub access is unavailable, report the concrete limitation and preserve the prepared content in chat; do not claim creation or change authentication/configuration without authorization.
 
-An agreed requirement can be handed to the testing or implementation workflow, but neither its confirmation nor approval to create an issue requests starting that workflow. Do not create repository files unless separately requested.
+An agreed requirement can be handed to the testing or implementation workflow, but neither its confirmation nor approval to create an issue requests starting that workflow. When called from an explicitly authorized overall workflow, return the handoff to that workflow. Do not create repository files unless separately requested.
