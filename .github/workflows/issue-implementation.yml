@@ -178,6 +178,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -197,3 +198,16 @@ jobs:
           script: |
             const { publish } = require('./.github/scripts/issue-implementation.cjs');
             await publish({ github, context, core });
+      # GITHUB_TOKEN-created PRs do not trigger another ordinary PR workflow.
+      - name: Queue review of the verified implementation PR
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ needs.prepare.outputs.issue_number }}
+          CODEX_RESULT: ${{ needs.implement.outputs.result }}
+        with:
+          script: |
+            const { validateResult } = require('./.github/scripts/issue-implementation.cjs');
+            if (validateResult(process.env.CODEX_RESULT).status === 'implemented') {
+              const { queueImplementationReview } = require('./.github/scripts/pull-request-review.cjs');
+              await queueImplementationReview({ github, context, number: process.env.ISSUE_NUMBER });
+            }
