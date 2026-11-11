@@ -9,7 +9,9 @@ analysis, implementation, PR review, and CI repair exercises are separate work.
 `.github/workflows/codex-setup.yml` runs only through `workflow_dispatch`. It checks
 that `OPENAI_API_KEY` exists, checks out the selected revision, and runs
 `openai/codex-action@v1` on a GitHub-hosted Ubuntu runner. Codex receives a read-only
-sandbox and the `drop-sudo` safety strategy. Checkout does not persist credentials.
+sandbox and runs as the dedicated `codex-ci` system user through the
+`unprivileged-user` safety strategy. The user can traverse the runner's workspace
+and read the checkout. Checkout does not persist credentials.
 The final Codex response is written to the run summary in a separate job.
 
 The workflow has only `contents: read` permission. It does not change source,
@@ -112,6 +114,11 @@ behavior and repository PR permissions for the actual implementation.
 
 ## Troubleshooting
 
+- **Runner socket restriction error:** The first live run on `ubuntu-latest`
+  failed in the action's `drop-sudo` setup while restricting
+  `/run/dbus/system_bus_socket`, before Codex made an API request. This workflow
+  uses OpenAI's supported dedicated-user strategy to avoid that failing path,
+  while retaining a read-only Codex sandbox.
 - **Missing key:** Add or correct the `OPENAI_API_KEY` repository secret and rerun.
 - **Authentication or model access error:** Check the key's project, permissions,
   and available model access. Replace a revoked key through GitHub secret settings.
@@ -126,6 +133,7 @@ behavior and repository PR permissions for the actual implementation.
 
 - [Codex GitHub Action](https://learn.chatgpt.com/docs/github-action)
 - [Action inputs](https://github.com/openai/codex-action/blob/v1/action.yml)
+- [OpenAI dedicated-user example](https://github.com/openai/codex-action/blob/v1/examples/unprivileged-user.yml)
 - [Manually running a workflow](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/manually-running-a-workflow)
 - [GITHUB_TOKEN authentication](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
 - [Workshop preparation task](https://workshops.de/classroom/9007582545/tasks/1583)
