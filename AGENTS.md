@@ -6,8 +6,9 @@
 - Inspect Git status and the affected diff before editing. Preserve existing work and avoid unrelated formatting, dependency changes, and refactors.
 - Communicate with the user in German. Write new repository documentation, identifiers, comments, and UI text in English, following existing conventions.
 - Follow the more specific instructions under `src/` and the book feature without duplicating their rules here.
-- Track the five workflow skills and their existing `context-recovery` helper
-  under `.agents/skills/`. Keep other personal skills, credentials, machine-specific
+- Track the five phase skills, the `j-feature-delivery` orchestration skill, and
+  their existing `context-recovery` helper under `.agents/skills/`. Keep other
+  personal skills, credentials, machine-specific
   paths, browser profiles, and MCP configuration out of the repository. Respect the
   user's current service/browser instructions.
 
