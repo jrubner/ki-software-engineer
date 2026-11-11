@@ -400,6 +400,13 @@ require a billing or limit change rather than repeated retries.
   that your GitHub account has the required repository access.
 - **Checkout or action installation fails:** Inspect the failed step. This is an
   infrastructure failure, not proof that application tests failed.
+- **Review generated, comment rejected with HTTP 403:** The isolated publisher
+  needs `pull-requests: write` for PR conversation comments. The live test rejected
+  `issues: write` with only PR read access. Keep the review job read-only and
+  grant the PR write scope only to the publisher; do not pass it an API key.
+- **Playwright cannot install on Ubuntu 26.04:** Use the pinned Ubuntu 24.04
+  runner. The existing Playwright 1.55 installation does not support Ubuntu 26.04.
+  Rerun only after the runner correction reaches the trusted default branch.
 
 ## References
 

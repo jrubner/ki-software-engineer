@@ -291,3 +291,12 @@ implementation verifier also runs unit tests. Both preparation and publication
 require the maintainer-controlled `implementation-approved` label in addition to
 readiness; analysis cannot authorize implementation. Workflows pin verified action
 commits and Ubuntu 24.04. These changes remain pending until their new PR is merged.
+
+GitHub validation passed for PR #11 in run `43086376012`. Live testing of the
+previously merged workflows exposed two infrastructure failures: PR review
+generated a report but its publisher received HTTP 403 with issue write / PR read
+permissions (run `43086372112`); issue #12 implementation stopped before Codex
+because Playwright 1.55 cannot install Chromium on the Ubuntu 26.04 runner selected
+by `ubuntu-latest` (run `43087080538`). PR #11 corrects the publisher scope and pins
+Ubuntu 24.04. Neither end-to-end publishing nor automatic implementation is
+verified until those corrections reach `main` and the live runs succeed.

@@ -83,8 +83,10 @@ jobs:
     timeout-minutes: 3
     permissions:
       contents: read
-      pull-requests: read
-      issues: write
+      # PR conversation comments need the PR write scope; issue write alone
+      # returned HTTP 403 in the live integration test.
+      pull-requests: write
+      issues: read
     steps:
       - name: Checkout the same trusted publishing helper
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
