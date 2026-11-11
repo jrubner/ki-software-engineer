@@ -57,7 +57,31 @@ The structure groups the book feature under `books/` and reusable helpers under 
 
 [AGENTS.md](AGENTS.md) defines project-wide constraints and an explicitly invoked refactoring workflow. [src/AGENTS.md](src/AGENTS.md) adds source conventions; [src/app/books/AGENTS.md](src/app/books/AGENTS.md) records book-specific contracts. Reading these files does not automatically start the workflow. [REFACTORING.md](REFACTORING.md) records concrete findings, retained design choices, deferred search risks, and verification for the user-authorized workshop task. Personal machine configuration is not part of these repository instructions.
 
-### GitHub issue analysis and implementation
+### GitHub issue analysis, implementation, and PR review
+
+The [PR review workflow](.github/workflows/pull-request-review.yml) uses
+`pull_request_target` for opened, updated, and reopened PRs. It checks out only
+the trusted base SHA, collects a bounded API diff and linked issue bodies, and
+runs Codex with `gpt-5.6-luna` in a read-only sandbox under a dedicated user.
+It does not install or run PR code. A fresh publisher without the API key
+rechecks the PR and requirement fingerprint before creating or updating one
+bot comment. Reviews do not approve, merge, or replace application tests.
+Paid automatic reviews require a maintainer event or an own local bot PR;
+fork reviews require an explicit maintainer dispatch on the default branch.
+The implementation publisher explicitly dispatches review for its verified PR,
+with `actions: write` limited to that publisher job. Bot handoffs require the
+expected head SHA. Review instructions and publishing helpers come from the
+base checkout, never the PR head. See the workflow documentation for bounds,
+trust assumptions, and the live verification procedure.
+
+Local workflow verification on 2026-11-11 passed all 36 Node helper tests
+(15 for PR review), the new helper's syntax check, formatting checks for the
+affected automation files, and Actionlint for all four workflows. Actionlint's
+outdated built-in metadata warning for the existing `permission-profile` input
+was excluded after checking the upstream action input definition. No paid API
+call or live GitHub review was run for this change; end-to-end verification
+remains pending publication on the default branch. Application code was not
+changed, and application builds/browser regressions were not rerun.
 
 The [Codex workflows](docs/codex-github-actions.md) separate API-based review from
 GitHub writes. The issue-analysis job reads an issue and source with a read-only

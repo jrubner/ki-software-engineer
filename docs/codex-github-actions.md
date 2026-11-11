@@ -247,6 +247,84 @@ label applied by a maintainer or the authorized analysis workflow approves this
 bounded implementation and PR creation. It does not authorize merge or deployment.
 An already-satisfied result records evidence without closing the issue.
 
+## Pull request review (workshop task 1586)
+
+`.github/workflows/pull-request-review.yml` adapts the workshop's Claude review
+to the official OpenAI Codex Action. It uses the existing `OPENAI_API_KEY` and
+explicitly selects `gpt-5.6-luna`, without a fallback. No new secret or skill is
+required. The five existing phase skills remain unchanged.
+
+- Opening, pushing commits to, or reopening a local PR targeting the default
+  branch starts a review when the event actor has write, maintain, or admin
+  permission. Other actors are skipped before a paid API call.
+- The existing implementation publisher dispatches review explicitly after
+  creating its verified PR. GitHub token event suppression makes an ordinary
+  PR event insufficient for this handoff. Only that publisher receives the
+  additional `actions: write` permission. The bot dispatch is restricted to its
+  own local PR and the supplied head revision.
+- A maintainer may select **Actions → Pull Request Review with Codex → Run
+  workflow**, select the default branch, and enter `pull_number` to review an
+  existing PR or a fork. Leave `head_sha` empty for a manual maintainer run.
+- Codex examines code quality, correctness, performance, security, and test
+  coverage using the diff, trusted base source, and locally linked issue bodies
+  (`Closes #N`, `Fixes #N`, or `Resolves #N`). It returns constructive German
+  Markdown with concrete findings and review limitations.
+- A separate publisher updates one bot comment with the reviewed head/base
+  revisions and workflow evidence. Human comments are preserved. No formal
+  approval, merge, issue closure, or source change is performed.
+
+### Trust boundary and limits
+
+The workflow intentionally uses `pull_request_target` with **only the base SHA
+checked out**, rather than executing the workshop's PR checkout under a key.
+PR descriptions, diffs, and issue bodies are untrusted data. Changed prompts,
+helpers, and agent instructions are reviewed as changes; they are never loaded
+from the head for execution. The workflow does not install PR dependencies or
+run PR builds, tests, scripts, or feature-delivery skills. Codex receives a
+read-only sandbox, a dedicated unprivileged user, and no GitHub write token.
+The publisher runs on a fresh runner with no OpenAI key.
+
+Reviews support at most 100 changed files, five locally linked issues, 200 KB
+of context, and 40 KB of structured output. Oversized or unavailable diffs
+fail explicitly rather than producing a silently partial review. Binary changes,
+missing head-only context, issue comments, external issue links, and runtime
+behavior may remain unreviewed and must be identified in the report. Static
+review cannot establish passing tests or overall correctness.
+
+The trusted checkout must match the current PR base. Head/base revisions, PR
+title/body, diff, and linked issue bodies form the review fingerprint. Changes
+during collection or before publishing reject the result; retry against the
+current base. An existing bot review of the same fingerprint suppresses another
+paid call. Re-runs update the comment when there is a new reviewable revision.
+GitHub does not offer an atomic comment-and-head comparison: a commit immediately
+after the final check can still supersede the posted review. The displayed SHAs
+identify its scope, and the next commit event schedules a new review.
+
+### Verify after merging this workflow
+
+1. Open a small disposable branch from the updated `main` and make a reviewable
+   Angular change. To reproduce the workshop exercise, add an isolated TypeScript
+   fixture containing a clear missing null check, unhandled request error, and
+   missing tests; do not import it into the application or merge it into `main`.
+2. Open a PR targeting `main` using a maintainer account. In Actions, inspect
+   **Pull Request Review with Codex**. Confirm the context step accepts it, Codex
+   uses `gpt-5.6-luna`, and the separate publisher succeeds.
+3. Inspect the PR comment: five review areas, actionable findings, limitations,
+   exact head/base revisions, and a working workflow link. Findings remain
+   probabilistic and need human judgment; no finding is not a correctness proof.
+4. Push a second commit that fixes one issue. Confirm another run updates the
+   existing bot comment to the new head rather than adding a duplicate. Rerunning
+   that same revision should skip the paid review.
+5. Close the disposable PR without merging. For the full issue workflow, use a
+   separately approved implementation issue and confirm its publisher queues
+   review with the created PR number and expected head SHA.
+
+Local checks use `node --test .github/scripts/*.test.cjs`. These tests exercise
+authorization, fork/bot boundaries, bounded context, stale results, comment
+preservation, and the implementation handoff with mocked GitHub responses. They
+do not call OpenAI or prove the workflow works on GitHub. A real run is still
+required after the workflow is available on the default branch.
+
 ## Troubleshooting
 
 The [fixed-model connectivity check](https://github.com/jrubner/ki-software-engineer/actions/runs/42995490576)
@@ -288,4 +366,5 @@ require a billing or limit change rather than repeated retries.
 - [Codex permission profiles](https://learn.chatgpt.com/docs/permissions)
 - [Workshop preparation task](https://workshops.de/classroom/9007582545/tasks/1583)
 - [Workshop issue analysis task](https://workshops.de/classroom/9007582545/tasks/1584)
+- [Workshop pull request review task](https://workshops.de/classroom/9007582545/tasks/1586)
 - [Workshop skill baseline](https://github.com/workshops-de/angular-workshop-agentic-ai-engineering/tree/solution--agentic-workflows-skills/.claude/skills)
