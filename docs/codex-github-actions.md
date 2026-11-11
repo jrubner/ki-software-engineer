@@ -2,8 +2,8 @@
 
 This adapts the workshop task **Prepare GitHub Workflows** to Codex. It prepares
 authentication and a manually triggered connectivity check. The issue analysis
-exercise is also included; implementation, PR review, and CI repair remain
-separate work.
+exercise and automatic implementation of ready issues are also included. PR
+review, merge, deployment, and automatic repair of failed CI remain separate work.
 
 ## Included behavior
 
@@ -98,8 +98,99 @@ issue is still open and unchanged. It then creates or updates its own analysis
 comment and applies `ready-for-implementation` or `needs-clarification`, removing
 only the opposite workflow label. Other labels and human comments are preserved.
 This job uses the automatically supplied `GITHUB_TOKEN`; `PAT_TOKEN` and
-`ANTHROPIC_API_KEY` are not used. It does not implement code, close issues, or
-create pull requests. API errors fail the analysis without a model fallback.
+`ANTHROPIC_API_KEY` are not used. A ready result explicitly dispatches the
+implementation workflow after publishing the analysis. Ordinary label events
+made with `GITHUB_TOKEN` do not start another workflow, so this publisher also
+has `actions: write` for that dispatch. A clarification result never starts
+implementation. API errors fail the analysis without a model fallback.
+
+## Automatic implementation of ready issues
+
+`.github/workflows/issue-implementation.yml` runs entirely on GitHub-hosted Ubuntu
+runners. Your computer and local Codex session can be closed after starting it.
+Every paid Codex call explicitly uses `gpt-5.6-luna` with `OPENAI_API_KEY`.
+
+### Start and monitor a run
+
+1. Merge the workflow into the default branch. In **Settings → Actions → General
+   → Workflow permissions**, enable **Allow GitHub Actions to create and approve
+   pull requests** if it is not already enabled. The workflow creates PRs; it
+   never approves or merges them. No additional secret or broader PAT is needed.
+2. Plan a feature with `j-feature-delivery` in chat. To keep planning separate
+   from execution, request a draft only: **Plan this feature and prepare its issue
+   draft; do not create the issue or start implementation yet.** Creating an
+   issue can now lead directly from a ready analysis to implementation.
+3. After agreeing the plan, request issue creation and GitHub implementation.
+   The existing analysis sets `ready-for-implementation` and explicitly queues
+   implementation when the requirement is complete. Alternatively, a maintainer
+   can apply that label to an existing, agreed issue. Public issue authors cannot
+   start paid implementation merely by opening an issue or commenting.
+4. Open **Actions → Issue Implementation with Codex**. Follow the **prepare**,
+   **implement**, **verify**, and **publish** jobs. The implementation comment
+   links the run and the resulting PR. Build and browser-test output appears in
+   the verification job logs.
+5. Review the PR. Its `Closes #N` link closes the issue only when the PR is merged
+   into the default branch. No automatic merge, deployment, or premature issue
+   closure is included.
+
+Already labeled issues do not emit a new label event when this workflow is
+installed. Start each existing issue once with **Run workflow**, select the
+default branch, enter its number in `issue_number`, and leave `fingerprint`
+empty. The same manual dispatch retries a failed or blocked attempt after its
+cause has been resolved. This is event-driven automation, not a periodic scan.
+
+### Delivery and trust boundaries
+
+- Preparation verifies maintainer access, current issue state, readiness, and
+  absence of `needs-clarification`. An analysis-bot dispatch requires a matching
+  requirement fingerprint. Duplicate implementation PRs and existing
+  `codex/issue-N` branches are skipped before another paid request.
+- Codex reads the existing orchestration and phase skills and records Red,
+  Green, Blue, and finalisation evidence. It stops for unresolved decisions,
+  dependencies, missing acceptance criteria, or unsupported testing. There is
+  no interactive interview on the runner and no additional skill.
+- The dedicated `codex-ci` user uses a custom profile extending `:workspace`,
+  with network enabled for local browser tests and existing external resources
+  such as Google Fonts. This profile permits direct network access; it does not
+  claim domain filtering. The API key is held by the action's proxy, and the
+  generation job has only repository read permission. Codex is the last step.
+- Codex returns structured UTF-8 file contents, not commands for the publisher.
+  A fresh job validates the schema and paths, installs trusted base dependencies,
+  reconstructs the files, runs development and production builds, and runs every
+  application Playwright spec under `tests/`, excluding `tests/example.spec.ts`.
+  New browser specs are included. No secrets or GitHub write token are given to
+  this job. These checks do not replace human review of acceptance coverage.
+- The publisher receives the exact verified result digest. It rechecks readiness,
+  requirements, and base SHA, then creates a Git tree, commit, branch, and PR
+  through GitHub APIs. It does not execute generated source. It never force-pushes
+  an existing branch. Independent checks must succeed for an implementation PR.
+
+Supported changes are text files under `src/`, `tests/`, `docs/`, and `public/`,
+plus root `ARCHITECTURE.md`, `REFACTORING.md`, and `README.md`. Instruction files,
+skills, workflows, dependency/configuration changes, binary assets, and symlinks
+require a separate maintainer change. Handoffs are limited to 30 files and
+100,000 UTF-8 bytes, including the report; larger requirements must be split.
+The repository's historical Karma problem remains a blocker for requirements
+that need unavailable unit-test infrastructure; it is not silently repaired.
+
+A blocked or already-satisfied result creates an evidence comment and leaves the
+issue open without a PR. Invalid output, failed checks, API errors, and stale
+requirements/base revisions fail the run without publishing code. Inspect the
+failed job, fix the cause, and manually dispatch again. An ambiguous publication
+failure may leave `codex/issue-N` without a PR: inspect the branch and run first,
+then create the missing PR manually or remove the verified unused branch before
+retrying. The workflow will not overwrite it.
+
+GitHub may require approval for other workflows triggered by a PR created using
+`GITHUB_TOKEN`. The implementation's independent checks have already run before
+PR creation; inspect and approve additional PR checks in GitHub when requested.
+The existing issue-only `PAT_TOKEN` is deliberately not used for code publishing.
+
+Local automation checks, with mocked GitHub APIs and no paid model calls:
+
+```sh
+node --test .github/scripts/issue-analysis.test.cjs .github/scripts/issue-implementation.test.cjs
+```
 
 ### Reproduce the workshop check
 
@@ -131,10 +222,10 @@ Keep these five phases and their existing skills:
 | Refactor | `developer-blue`            | Verified Green baseline, scoped findings resolved or justified no-change result                           |
 | Finalise | `requirements-finalisation` | Acceptance matrix, required checks, delivery conditions and authorized issue actions                      |
 
-The five workflow skills under `.agents/skills/` and their existing
-`context-recovery` helper are tracked in this repository and available after
-checkout in GitHub Actions. No additional skill or synchronization mechanism is
-introduced. The setup check does not execute these skills.
+The five phase skills, their `j-feature-delivery` orchestrator, and the existing
+`context-recovery` helper under `.agents/skills/` are tracked and available after
+checkout in GitHub Actions. The implementation prompt reuses them; the setup
+check does not execute them.
 
 The workshop's linked `solution--agentic-workflows-skills` baseline instead
 contains tracked skills under `.claude/skills/`; it does not prescribe a secret
@@ -144,23 +235,17 @@ skills directly through version control.
 
 The skills currently refer to `context-recovery` when context is missing. This is
 an existing conditional helper, not a sixth workflow phase or a formal `required`
-dependency. The future runner must either receive complete context or stop with a
+dependency. The implementation runner must either receive complete context or stop with a
 specific blocker. The existing helper is included in the checkout. Finalisation
 currently has no mandatory Blue handoff, so the orchestrator must explicitly
 require a Blue result (including a justified no-change result) for this five-phase
 sequence.
 
-Before automation, define a shared handoff containing the issue identity, source
-revision, unchanged acceptance criterion IDs, phase outcome, changed paths,
-commands and actual results, and blockers. Do not advance after missing evidence.
-An already satisfied Red result needs an explicit Green no-change path. Each
-phase's existing stopping and authorization rules still apply. A workflow run
-does not itself authorize publishing changes, merging, or closing an issue.
-
-Use narrowly scoped `GITHUB_TOKEN` permissions for future issue/PR operations.
-Choose explicit dispatch or a GitHub App if later runs need to trigger each other;
-do not add a broad PAT merely to imitate the Claude example. Evaluate event
-behavior and repository PR permissions for the actual implementation.
+The implementation handoff carries the issue identity, source revision, requirement
+fingerprint, unchanged acceptance IDs, phase evidence, and changed files. A ready
+label applied by a maintainer or the authorized analysis workflow approves this
+bounded implementation and PR creation. It does not authorize merge or deployment.
+An already-satisfied result records evidence without closing the issue.
 
 ## Troubleshooting
 
@@ -199,6 +284,8 @@ require a billing or limit change rather than repeated retries.
 - [OpenAI dedicated-user example](https://github.com/openai/codex-action/blob/v1/examples/unprivileged-user.yml)
 - [Manually running a workflow](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/manually-running-a-workflow)
 - [GITHUB_TOKEN authentication](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
+- [Workflow event and token behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+- [Codex permission profiles](https://learn.chatgpt.com/docs/permissions)
 - [Workshop preparation task](https://workshops.de/classroom/9007582545/tasks/1583)
 - [Workshop issue analysis task](https://workshops.de/classroom/9007582545/tasks/1584)
 - [Workshop skill baseline](https://github.com/workshops-de/angular-workshop-agentic-ai-engineering/tree/solution--agentic-workflows-skills/.claude/skills)

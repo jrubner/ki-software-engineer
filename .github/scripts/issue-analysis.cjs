@@ -135,6 +135,23 @@ async function publish({ github, context, core }) {
     await github.rest.issues.createComment({ ...target, body });
   }
   await core.summary.addHeading('Issue analysis').addRaw(`Issue #${number}: ${result.label}`).write();
+  if (result.label === 'ready-for-implementation') {
+    // GITHUB_TOKEN label events do not start another workflow. Dispatch explicitly.
+    const { snapshot: implementationSnapshot, requirementData, digest } = require('./issue-implementation.cjs');
+    const current = await implementationSnapshot(github, context.repo, number);
+    if (current.fingerprint !== digest(JSON.stringify(requirementData(snapshot.data)))) {
+      core.warning('Requirements changed during publication; analyze again before implementation.');
+      return;
+    }
+    const { data: repository } = await github.rest.repos.get(context.repo);
+    await github.rest.actions.createWorkflowDispatch({
+      ...context.repo,
+      workflow_id: 'issue-implementation.yml',
+      ref: repository.default_branch,
+      inputs: { issue_number: String(number), fingerprint: current.fingerprint }
+    });
+    core.info(`Queued implementation for issue #${number}.`);
+  }
 }
 
 module.exports = { issueNumber, validateReport, readIssue, prepare, publish, isAnalysisComment };

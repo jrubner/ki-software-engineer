@@ -88,6 +88,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      actions: write
     steps:
       - name: Checkout publishing code
         uses: actions/checkout@v4
