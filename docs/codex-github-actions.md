@@ -104,7 +104,13 @@ made with `GITHUB_TOKEN` do not start another workflow, so this publisher also
 has `actions: write` for that dispatch. A clarification result never starts
 implementation. API errors fail the analysis without a model fallback.
 
-## Automatic implementation of ready issues
+## Automatic implementation of ready issues (workshop task 1585)
+
+This implements [Auto-implement GitHub Issues](https://workshops.de/classroom/9007582545/tasks/1585)
+using the [official Codex GitHub Action](https://learn.chatgpt.com/docs/github-action).
+The workshop's Claude commands are replaced by the existing Codex phase skills
+and schema-constrained output. Generation, verification, and publication run in
+separate jobs with only the permissions each job needs.
 
 `.github/workflows/issue-implementation.yml` runs entirely on GitHub-hosted Ubuntu
 runners. Your computer and local Codex session can be closed after starting it.
@@ -145,6 +151,9 @@ cause has been resolved. This is event-driven automation, not a periodic scan.
   absence of `needs-clarification`. An analysis-bot dispatch requires a matching
   requirement fingerprint. Duplicate implementation PRs and existing
   `codex/issue-N` branches are skipped before another paid request.
+  The stable issue-number branch replaces the workshop's title-based branch;
+  editing the title cannot create a second delivery branch. Existing branches
+  require inspection rather than automatic reuse or overwrite.
 - Codex reads the existing orchestration and phase skills and records Red,
   Green, Blue, and finalisation evidence. It stops for unresolved decisions,
   dependencies, missing acceptance criteria, or unsupported testing. There is
@@ -164,6 +173,9 @@ cause has been resolved. This is event-driven automation, not a periodic scan.
   requirements, and base SHA, then creates a Git tree, commit, branch, and PR
   through GitHub APIs. It does not execute generated source. It never force-pushes
   an existing branch. Independent checks must succeed for an implementation PR.
+  Commits and PR titles use `feat(issue-N): ...`. The issue comment includes the
+  branch, commit message, phase report, and PR link; the PR includes a review
+  checklist, verification evidence, and `Closes #N`.
 
 Supported changes are text files under `src/`, `tests/`, `docs/`, and `public/`,
 plus root `ARCHITECTURE.md`, `REFACTORING.md`, and `README.md`. Instruction files,
@@ -191,6 +203,33 @@ Local automation checks, with mocked GitHub APIs and no paid model calls:
 ```sh
 node --test .github/scripts/issue-analysis.test.cjs .github/scripts/issue-implementation.test.cjs
 ```
+
+The local review on 2026-11-11 passed all 21 helper tests, including publication
+metadata, duplicate prevention, stale requirements, protected paths, and symlink
+rejection. These mocked tests do not prove a successful GitHub-hosted run.
+Prettier, JavaScript syntax checks, and `git diff --check` also passed.
+Actionlint 1.7.12 passed all three workflows with only its outdated
+`permission-profile` input-metadata warning excluded: the current upstream
+[`action.yml`](https://github.com/openai/codex-action/blob/v1/action.yml)
+explicitly defines that input. No live implementation or paid model call was
+performed during this review.
+
+### Verify task 1585 after merge
+
+1. Confirm the PR-creation setting above is enabled. Keep the default workflow
+   permission read-only; the workflow declares its own narrowly scoped writes.
+2. Use an agreed, small BookMonkey requirement with observable acceptance criteria
+   and supported Playwright coverage. The workshop's React/Tailwind dark-mode
+   sample is illustrative; this Angular application already has dark mode.
+   Do not create a duplicate feature merely to obtain a code-changing PR.
+3. Apply `ready-for-implementation` as a maintainer, or manually dispatch the
+   implementation workflow with the issue number and an empty fingerprint.
+4. Inspect all four jobs and the issue comment. A new requirement should produce
+   a `codex/issue-N` branch and a PR with a conventional title, review checklist,
+   test evidence, and `Closes #N`. The issue must remain open until merge.
+5. Retry once to check duplicate prevention. No second PR or paid generation
+   should be created. A genuinely satisfied requirement should instead record
+   criterion evidence without a PR; a blocker must identify the required action.
 
 ### Reproduce the workshop check
 

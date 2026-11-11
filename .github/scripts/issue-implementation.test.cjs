@@ -269,11 +269,16 @@ test('publishes only verified files through the Git API and links closure to the
   );
   assert.equal(f.writes[0].args.tree[0].content, JSON.parse(implemented).files[0].content);
   assert.equal(f.writes[1].args.parents[0], 'base-sha');
+  assert.equal(f.writes[1].args.message, 'feat(issue-42): Anforderung automatisch umsetzen');
   assert.equal(f.writes[2].args.ref, 'refs/heads/codex/issue-42');
   assert.equal(f.writes[3].args.base, 'main');
+  assert.equal(f.writes[3].args.title, 'feat(issue-42): Show a heading');
   assert.match(f.writes[3].args.body, /Closes #42/);
+  assert.match(f.writes[3].args.body, /- \[ \] Akzeptanzkriterien/);
   assert.match(f.writes[3].args.body, /gpt-5\.6-luna/);
   assert.match(f.writes[4].args.body, /pull\/43/);
+  assert.match(f.writes[4].args.body, /Branch: `codex\/issue-42`/);
+  assert.match(f.writes[4].args.body, /Commit: `feat\(issue-42\):/);
   assert.equal(f.issue.state, 'open');
 });
 
