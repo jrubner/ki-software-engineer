@@ -1,8 +1,9 @@
-# Codex GitHub Actions setup
+# Codex GitHub Actions
 
 This adapts the workshop task **Prepare GitHub Workflows** to Codex. It prepares
-authentication and a manually triggered connectivity check. The subsequent issue
-analysis, implementation, PR review, and CI repair exercises are separate work.
+authentication and a manually triggered connectivity check. The issue analysis
+exercise is also included; implementation, PR review, and CI repair remain
+separate work.
 
 ## Included behavior
 
@@ -72,6 +73,52 @@ The Codex adaptation's workshop checkpoint is therefore `OPENAI_API_KEY` plus
 and event strategy when implementing the following exercises; issue comments and
 labels can also use an appropriately permissioned `GITHUB_TOKEN`.
 
+## Issue analysis (workshop task 1584)
+
+`.github/workflows/issue-analysis.yml` analyzes open issues on `issues.opened`,
+`issues.edited`, and `issue_comment.created`. It also accepts an issue number
+through **Actions → Issue Analysis with Codex → Run workflow**. The event workflow
+must be on the default branch before automatic issue events will start it.
+
+Only actors with repository write, maintain, or admin access can trigger paid
+analysis. Bot comments and pull requests are excluded. Comments from outside
+contributors remain reviewable context when a maintainer requests analysis.
+Runs for the same issue are serialized. Each run reads the current issue and up
+to the latest 100 discussion comments; a truncated discussion is explicitly
+classified as needing clarification.
+
+The analysis job has read-only repository and issue access. It sends the issue
+context and checked-out source to `gpt-5.6-luna`, using the same dedicated-user,
+read-only sandbox as the setup check. Issue text is treated as untrusted data.
+The prompt does not execute the five development phases or create a sixth skill.
+Codex returns a schema-constrained JSON report with one of two labels.
+
+A separate job with `issues: write` validates the output and checks that the
+issue is still open and unchanged. It then creates or updates its own analysis
+comment and applies `ready-for-implementation` or `needs-clarification`, removing
+only the opposite workflow label. Other labels and human comments are preserved.
+This job uses the automatically supplied `GITHUB_TOKEN`; `PAT_TOKEN` and
+`ANTHROPIC_API_KEY` are not used. It does not implement code, close issues, or
+create pull requests. API errors fail the analysis without a model fallback.
+
+### Reproduce the workshop check
+
+1. After merge, create an issue titled **Feature: Edit User Profile**, using the
+   story and acceptance criteria supplied in task 1584.
+2. In **Actions**, open the automatically triggered **Issue Analysis with Codex**
+   run. Both jobs must succeed.
+3. Check the issue for a seven-section analysis comment and the corresponding
+   label. BookMonkey currently has no profile editor, authentication, or profile
+   persistence; the report should identify that gap rather than invent paths.
+4. Add clarification or edit the issue. A new run should update the existing bot
+   comment rather than add duplicate analysis comments. Bot comments must not
+   trigger another paid analysis.
+
+The workshop example is a workflow test, not an approved profile feature.
+Local publisher checks run with
+`node --test .github/scripts/issue-analysis.test.cjs`; they use mocked GitHub
+responses and do not call the API or use a key.
+
 ## Existing five-skill workflow
 
 Keep these five phases and their existing skills:
@@ -117,6 +164,10 @@ behavior and repository PR permissions for the actual implementation.
 
 ## Troubleshooting
 
+The [fixed-model connectivity check](https://github.com/jrubner/ki-software-engineer/actions/runs/42995490576)
+succeeded on 2026-11-11 with `gpt-5.6-luna`, including the separate report job.
+The failures below are historical evidence from earlier key/model configuration.
+
 The [dedicated-user live check](https://github.com/jrubner/ki-software-engineer/actions/runs/42992303383)
 passed runner preparation and started Codex, but the API returned
 `Quota exceeded. Check your plan and billing details.` No model response or setup
@@ -149,4 +200,5 @@ require a billing or limit change rather than repeated retries.
 - [Manually running a workflow](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/manually-running-a-workflow)
 - [GITHUB_TOKEN authentication](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
 - [Workshop preparation task](https://workshops.de/classroom/9007582545/tasks/1583)
+- [Workshop issue analysis task](https://workshops.de/classroom/9007582545/tasks/1584)
 - [Workshop skill baseline](https://github.com/workshops-de/angular-workshop-agentic-ai-engineering/tree/solution--agentic-workflows-skills/.claude/skills)

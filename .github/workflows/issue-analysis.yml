@@ -1,0 +1,106 @@
+name: Issue Analysis with Codex
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to analyze
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: issue-analysis-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  analyze-issue:
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      !github.event.issue.pull_request &&
+      (github.event_name != 'issue_comment' || github.event.comment.user.type != 'Bot')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      issue_number: ${{ steps.context.outputs.issue_number }}
+      fingerprint: ${{ steps.context.outputs.fingerprint }}
+      report: ${{ steps.codex.outputs.final-message }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Collect issue context
+        id: context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { prepare } = require('./.github/scripts/issue-analysis.cjs');
+            await prepare({ github, context, core });
+
+      - name: Check API key configuration
+        if: steps.context.outputs.analyze == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Add the OPENAI_API_KEY repository secret."
+            exit 1
+          fi
+
+      - name: Prepare an unprivileged Codex user
+        if: steps.context.outputs.analyze == 'true'
+        run: |
+          sudo adduser --system --home /home/codex-ci --shell /bin/bash --group codex-ci
+          sudo usermod -a -G codex-ci runner
+          sudo usermod -a -G runner codex-ci
+          sudo chown -R runner:codex-ci "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rX "$GITHUB_WORKSPACE"
+
+      # Keep Codex last; publish only validated output in a fresh job.
+      - name: Analyze issue with Codex
+        if: steps.context.outputs.analyze == 'true'
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.6-luna
+          prompt-file: .github/codex/prompts/issue-analysis.md
+          codex-args: '["--output-schema", ".github/codex/issue-analysis.schema.json"]'
+          sandbox: read-only
+          safety-strategy: unprivileged-user
+          codex-user: codex-ci
+
+  publish-analysis:
+    needs: analyze-issue
+    if: needs.analyze-issue.outputs.report != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout publishing code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Publish issue analysis
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ needs.analyze-issue.outputs.issue_number }}
+          ISSUE_FINGERPRINT: ${{ needs.analyze-issue.outputs.fingerprint }}
+          CODEX_REPORT: ${{ needs.analyze-issue.outputs.report }}
+        with:
+          script: |
+            const { publish } = require('./.github/scripts/issue-analysis.cjs');
+            await publish({ github, context, core });

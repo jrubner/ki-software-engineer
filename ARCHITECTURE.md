@@ -57,6 +57,16 @@ The structure groups the book feature under `books/` and reusable helpers under 
 
 [AGENTS.md](AGENTS.md) defines project-wide constraints and an explicitly invoked refactoring workflow. [src/AGENTS.md](src/AGENTS.md) adds source conventions; [src/app/books/AGENTS.md](src/app/books/AGENTS.md) records book-specific contracts. Reading these files does not automatically start the workflow. [REFACTORING.md](REFACTORING.md) records concrete findings, retained design choices, deferred search risks, and verification for the user-authorized workshop task. Personal machine configuration is not part of these repository instructions.
 
+### GitHub issue analysis
+
+The [Codex workflows](docs/codex-github-actions.md) separate API-based review from
+GitHub writes. The issue-analysis job reads an issue and source with a read-only
+token and sandbox; a separate publisher validates structured output and checks
+the issue revision before updating its own comment and two workflow-owned labels.
+All workflows using the repository's OpenAI key explicitly select `gpt-5.6-luna`.
+This automation reviews requirements and does not start the five development
+phases or change application behavior.
+
 ### Refactoring verification (2026-11-09)
 
 - Extracted the list and detail templates without changing component logic, bindings, styles, or UI text. The extraction checked exact content before formatting; final review compared both templates after identical Angular formatting and verified that replacing the template declaration is the only TypeScript change.
