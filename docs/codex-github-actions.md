@@ -18,7 +18,10 @@ The workflow has only `contents: read` permission. It does not change source,
 create issues or pull requests, close issues, merge, deploy, or start automatically
 when somebody opens an issue or pull request. No personal access token is needed
 for this check. The action and CLI use their upstream version defaults; dependency
-pinning can be agreed when building the production workflow.
+pinning can be agreed when building the production workflow. Every API-backed
+workflow using this repository's `OPENAI_API_KEY` must explicitly select
+`gpt-5.6-luna`, the only model authorized for this key. Do not use a default model
+or fall back to a different model.
 
 ## Manual setup: API authentication
 
