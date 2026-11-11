@@ -123,15 +123,6 @@ credits and applicable usage or spend limits, resolve the reported restriction,
 then rerun the workflow with the dedicated-user fix selected. API quota errors
 require a billing or limit change rather than repeated retries.
 
-The [dedicated-user live check](https://github.com/jrubner/ki-software-engineer/actions/runs/42992303383)
-passed runner preparation and started Codex, but the API returned
-`Quota exceeded. Check your plan and billing details.` No model response or setup
-report was produced. Before retrying, open the API platform's billing settings
-for the organization and project associated with `OPENAI_API_KEY`. Check available
-credits and applicable usage or spend limits, resolve the reported restriction,
-then rerun the workflow with the dedicated-user fix selected. API quota errors
-require a billing or limit change rather than repeated retries.
-
 - **Runner socket restriction error:** The first live run on `ubuntu-latest`
   failed in the action's `drop-sudo` setup while restricting
   `/run/dbus/system_bus_socket`, before Codex made an API request. This workflow
