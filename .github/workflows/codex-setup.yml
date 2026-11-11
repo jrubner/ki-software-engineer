@@ -33,6 +33,15 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Prepare an unprivileged Codex user
+        shell: bash
+        run: |
+          sudo adduser --system --home /home/codex-ci --shell /bin/bash --group codex-ci
+          sudo usermod -a -G codex-ci runner
+          sudo usermod -a -G runner codex-ci
+          sudo chown -R runner:codex-ci "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rX "$GITHUB_WORKSPACE"
+
       # Keep Codex last; publish its output in a fresh job.
       - name: Run Codex setup check
         id: codex
@@ -41,7 +50,8 @@ jobs:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           prompt-file: .github/codex/prompts/setup.md
           sandbox: read-only
-          safety-strategy: drop-sudo
+          safety-strategy: unprivileged-user
+          codex-user: codex-ci
 
   report:
     name: Publish setup report

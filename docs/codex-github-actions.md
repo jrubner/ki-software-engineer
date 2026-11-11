@@ -9,7 +9,9 @@ analysis, implementation, PR review, and CI repair exercises are separate work.
 `.github/workflows/codex-setup.yml` runs only through `workflow_dispatch`. It checks
 that `OPENAI_API_KEY` exists, checks out the selected revision, and runs
 `openai/codex-action@v1` on a GitHub-hosted Ubuntu runner. Codex receives a read-only
-sandbox and the `drop-sudo` safety strategy. Checkout does not persist credentials.
+sandbox and runs as the dedicated `codex-ci` system user through the
+`unprivileged-user` safety strategy. The user can traverse the runner's workspace
+and read the checkout. Checkout does not persist credentials.
 The final Codex response is written to the run summary in a separate job.
 
 The workflow has only `contents: read` permission. It does not change source,
@@ -79,21 +81,21 @@ Keep these five phases and their existing skills:
 | Refactor | `developer-blue`            | Verified Green baseline, scoped findings resolved or justified no-change result                           |
 | Finalise | `requirements-finalisation` | Acceptance matrix, required checks, delivery conditions and authorized issue actions                      |
 
-Personal skills under `.agents/skills/` remain local and are not checked out by
-GitHub Actions. This setup does not copy or synchronize them into tracked files
-and creates no additional skill. Their availability on a runner must be agreed
-before implementing the full workflow.
+The five workflow skills under `.agents/skills/` and their existing
+`context-recovery` helper are tracked in this repository and available after
+checkout in GitHub Actions. No additional skill or synchronization mechanism is
+introduced. The setup check does not execute these skills.
 
 The workshop's linked `solution--agentic-workflows-skills` baseline instead
 contains tracked skills under `.claude/skills/`; it does not prescribe a secret
 containing skill texts. That Claude-specific baseline is not reset or copied over
-this repository. Adapting it to Codex while keeping personal skills local requires
-an explicit decision about which instructions can be shared with CI.
+this repository. This Codex adaptation shares the existing repository workflow
+skills directly through version control.
 
 The skills currently refer to `context-recovery` when context is missing. This is
 an existing conditional helper, not a sixth workflow phase or a formal `required`
 dependency. The future runner must either receive complete context or stop with a
-specific blocker; it cannot assume a local helper is installed. Finalisation
+specific blocker. The existing helper is included in the checkout. Finalisation
 currently has no mandatory Blue handoff, so the orchestrator must explicitly
 require a Blue result (including a justified no-change result) for this five-phase
 sequence.
@@ -112,6 +114,20 @@ behavior and repository PR permissions for the actual implementation.
 
 ## Troubleshooting
 
+The [dedicated-user live check](https://github.com/jrubner/ki-software-engineer/actions/runs/42992303383)
+passed runner preparation and started Codex, but the API returned
+`Quota exceeded. Check your plan and billing details.` No model response or setup
+report was produced. Before retrying, open the API platform's billing settings
+for the organization and project associated with `OPENAI_API_KEY`. Check available
+credits and applicable usage or spend limits, resolve the reported restriction,
+then rerun the workflow with the dedicated-user fix selected. API quota errors
+require a billing or limit change rather than repeated retries.
+
+- **Runner socket restriction error:** The first live run on `ubuntu-latest`
+  failed in the action's `drop-sudo` setup while restricting
+  `/run/dbus/system_bus_socket`, before Codex made an API request. This workflow
+  uses OpenAI's supported dedicated-user strategy to avoid that failing path,
+  while retaining a read-only Codex sandbox.
 - **Missing key:** Add or correct the `OPENAI_API_KEY` repository secret and rerun.
 - **Authentication or model access error:** Check the key's project, permissions,
   and available model access. Replace a revoked key through GitHub secret settings.
@@ -126,6 +142,7 @@ behavior and repository PR permissions for the actual implementation.
 
 - [Codex GitHub Action](https://learn.chatgpt.com/docs/github-action)
 - [Action inputs](https://github.com/openai/codex-action/blob/v1/action.yml)
+- [OpenAI dedicated-user example](https://github.com/openai/codex-action/blob/v1/examples/unprivileged-user.yml)
 - [Manually running a workflow](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/manually-running-a-workflow)
 - [GITHUB_TOKEN authentication](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
 - [Workshop preparation task](https://workshops.de/classroom/9007582545/tasks/1583)
