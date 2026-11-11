@@ -16,7 +16,11 @@ function fixture({ issue = {}, comments = [], permission = 'write' } = {}) {
   const github = {
     rest: {
       issues,
-      repos: { getCollaboratorPermissionLevel: async () => ({ data: { permission } }) }
+      repos: {
+        getCollaboratorPermissionLevel: async () => ({ data: { permission } }),
+        get: async () => ({ data: { default_branch: 'main' } })
+      },
+      actions: { createWorkflowDispatch: async args => writes.push({ method: 'dispatch', args }) }
     },
     paginate: async () => comments
   };
@@ -140,4 +144,36 @@ test('bounds discussion context but still locates older bot comments for updates
   assert.equal(data.comments[0].id, 1);
   await publishing(f);
   assert.equal(f.writes.find(write => write.method === 'updateComment').args.comment_id, 999);
+});
+
+test('explicitly dispatches ready issues after publishing analysis, but never clarification results', async () => {
+  const f = fixture();
+  await publishing(f, {
+    CODEX_REPORT: JSON.stringify({ label: 'ready-for-implementation', report: 'Criteria are complete.' })
+  });
+  assert.deepEqual(
+    f.writes.map(write => write.method),
+    ['addLabels', 'createComment', 'dispatch']
+  );
+  const dispatch = f.writes.at(-1).args;
+  assert.equal(dispatch.workflow_id, 'issue-implementation.yml');
+  assert.equal(dispatch.ref, 'main');
+  assert.equal(dispatch.inputs.issue_number, '42');
+  assert.match(dispatch.inputs.fingerprint, /^[a-f0-9]{64}$/);
+});
+
+test('does not dispatch new requirements that arrived while publishing the analyzed requirement', async () => {
+  const f = fixture();
+  f.github.rest.issues.createComment = async args => {
+    f.writes.push({ method: 'createComment', args });
+    const { data } = await f.github.rest.issues.get();
+    data.body = 'Changed during publication';
+  };
+  await publishing(f, {
+    CODEX_REPORT: JSON.stringify({ label: 'ready-for-implementation', report: 'Original criteria are complete.' })
+  });
+  assert.deepEqual(
+    f.writes.map(write => write.method),
+    ['addLabels', 'createComment']
+  );
 });
