@@ -81,21 +81,21 @@ Keep these five phases and their existing skills:
 | Refactor | `developer-blue`            | Verified Green baseline, scoped findings resolved or justified no-change result                           |
 | Finalise | `requirements-finalisation` | Acceptance matrix, required checks, delivery conditions and authorized issue actions                      |
 
-Personal skills under `.agents/skills/` remain local and are not checked out by
-GitHub Actions. This setup does not copy or synchronize them into tracked files
-and creates no additional skill. Their availability on a runner must be agreed
-before implementing the full workflow.
+The five workflow skills under `.agents/skills/` and their existing
+`context-recovery` helper are tracked in this repository and available after
+checkout in GitHub Actions. No additional skill or synchronization mechanism is
+introduced. The setup check does not execute these skills.
 
 The workshop's linked `solution--agentic-workflows-skills` baseline instead
 contains tracked skills under `.claude/skills/`; it does not prescribe a secret
 containing skill texts. That Claude-specific baseline is not reset or copied over
-this repository. Adapting it to Codex while keeping personal skills local requires
-an explicit decision about which instructions can be shared with CI.
+this repository. This Codex adaptation shares the existing repository workflow
+skills directly through version control.
 
 The skills currently refer to `context-recovery` when context is missing. This is
 an existing conditional helper, not a sixth workflow phase or a formal `required`
 dependency. The future runner must either receive complete context or stop with a
-specific blocker; it cannot assume a local helper is installed. Finalisation
+specific blocker. The existing helper is included in the checkout. Finalisation
 currently has no mandatory Blue handoff, so the orchestrator must explicitly
 require a Blue result (including a justified no-change result) for this five-phase
 sequence.
@@ -113,6 +113,15 @@ do not add a broad PAT merely to imitate the Claude example. Evaluate event
 behavior and repository PR permissions for the actual implementation.
 
 ## Troubleshooting
+
+The [dedicated-user live check](https://github.com/jrubner/ki-software-engineer/actions/runs/42992303383)
+passed runner preparation and started Codex, but the API returned
+`Quota exceeded. Check your plan and billing details.` No model response or setup
+report was produced. Before retrying, open the API platform's billing settings
+for the organization and project associated with `OPENAI_API_KEY`. Check available
+credits and applicable usage or spend limits, resolve the reported restriction,
+then rerun the workflow with the dedicated-user fix selected. API quota errors
+require a billing or limit change rather than repeated retries.
 
 - **Runner socket restriction error:** The first live run on `ubuntu-latest`
   failed in the action's `drop-sudo` setup while restricting
