@@ -2,8 +2,9 @@
 
 This adapts the workshop task **Prepare GitHub Workflows** to Codex. It prepares
 authentication and a manually triggered connectivity check. The issue analysis
-exercise and automatic implementation of ready issues are also included. PR
-review, merge, deployment, and automatic repair of failed CI remain separate work.
+exercise, automatic implementation of ready issues, PR review, and repair of
+failed repository validation are also included. Merge remains a human decision;
+deployment is outside the current repository workflow.
 
 ## Included behavior
 
@@ -421,6 +422,78 @@ require a billing or limit change rather than repeated retries.
 - [Workshop issue analysis task](https://workshops.de/classroom/9007582545/tasks/1584)
 - [Workshop pull request review task](https://workshops.de/classroom/9007582545/tasks/1586)
 - [Workshop skill baseline](https://github.com/workshops-de/angular-workshop-agentic-ai-engineering/tree/solution--agentic-workflows-skills/.claude/skills)
+
+## Self-healing CI (workshop task 1587)
+
+`.github/workflows/auto-fix.yml` implements the
+[self-healing CI exercise](https://workshops.de/classroom/9007582545/tasks/1587)
+with Codex rather than Claude. It follows OpenAI's
+[isolated repair and publication guidance](https://learn.chatgpt.com/docs/non-interactive-mode)
+and the [Codex GitHub Action](https://learn.chatgpt.com/docs/github-action).
+The workflow must first be merged into the default branch: GitHub only starts
+`workflow_run` workflows defined there. No additional skill, PAT, or secret is
+required. Keep `OPENAI_API_KEY` configured and allow Actions to create PRs.
+
+### Behavior and limits
+
+- Only a completed, failed `Repository Validation` run is eligible. Successful,
+  cancelled, unrelated, fork, bot-authored, repeated, and stale-revision runs are
+  skipped before paid generation. The initiating actor must currently have
+  write, maintain, or admin permission. This includes manually dispatched CI.
+- Preparation reads the failed revision and the last 16,000 characters from up
+  to three failed job logs. Common credential patterns are redacted; this is not
+  a guarantee that arbitrary sensitive log content can be detected. Keep secrets
+  out of application logs. Logs are treated as untrusted context.
+- Codex uses `gpt-5.6-luna` under the dedicated `codex-ci` user with read-only
+  repository credentials. It receives the API key only in its final job step.
+  Trusted workflow controls and the failed source use separate checkouts.
+- A fresh runner without the OpenAI key reconstructs the schema-constrained
+  output and runs automation tests, Angular unit tests, development and production
+  builds, application browser tests, and whitespace checks. The publisher checks
+  the verified output digest and rechecks the target revision.
+- A passing minimal repair becomes one Conventional Commit on
+  `codex/auto-fix-<failed-run-id>` and a new PR targeting the failed branch.
+  Nothing is pushed directly to that branch. The publisher explicitly dispatches
+  Repository Validation for the repair branch because ordinary `GITHUB_TOKEN`
+  pushes and PR events do not start subsequent workflows. There is no automatic
+  merge or deployment.
+- Unsupported, unresolved, timed-out, or independently rejected repairs create
+  one issue per failed CI run with `bug`, `auto-fix-failed`, and `needs-attention`.
+  It links the original failure and repair attempt. Invalid agent output is not
+  copied into the issue. Existing notifications and repair PRs are deduplicated.
+- Repairs are limited to the existing application-text allowlist: `src/`,
+  `tests/`, `docs/`, `public/`, and root README/architecture/refactoring documents;
+  at most 30 files and 100 KB of structured output. Workflow controls, skills,
+  credentials, package/lock files, and build/test configuration cannot be changed.
+  Dependency and infrastructure problems therefore require manual intervention.
+  Architectural changes, business decisions, and unavailable external services
+  also produce a blocker rather than a speculative fix.
+- Repair branches, merged commits beginning with
+  `fix(ci): Automatische CI-Reparatur`, reruns of the original CI, and existing
+  repair PRs are excluded. There is no automatic retry loop. Merging a repair
+  with a different commit message removes that particular message-based guard;
+  review the resulting CI before trying further repairs.
+
+### Validate after merging the workflow
+
+1. Create a disposable branch from the updated `main`. Introduce one obvious
+   TypeScript syntax error in an application file and open a PR. Never break
+   `main` for this test. Use your own write-authorized account, not a bot or fork.
+2. Wait for `Repository Validation` to fail. In Actions, open
+   **Auto-Fix CI Failures with Codex** and confirm that preparation, repair,
+   independent verification, and publication succeed.
+3. Expect one `fix(ci): ...` PR from `codex/auto-fix-<run-id>` targeting the
+   disposable branch. Inspect the small fix, its cause, verification evidence,
+   and the explicitly dispatched green validation run. No branch should merge
+   automatically. The successful repair-branch CI must not start another repair.
+4. On another disposable branch, deliberately break a protected build setting,
+   for example set `outputPath` to an invalid numeric value in `angular.json`.
+   Expect a blocked repair, no fix PR, and one labeled issue containing both run
+   links and the next manual step. Rerunning the original failed CI is skipped;
+   rerunning the repair workflow must not duplicate its existing issue.
+5. Close the disposable PRs and notification issue and delete their branches
+   after inspecting the evidence. These tests make paid API requests. A passing
+   local guard suite alone does not demonstrate a live model-generated repair.
 
 ## Repository validation and merge policy
 
