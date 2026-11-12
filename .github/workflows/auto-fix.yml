@@ -87,8 +87,12 @@ jobs:
           [permissions.ci-repair.network]
           enabled = true
           EOF
-          sudo chown -R runner:codex-ci /home/codex-ci/.codex
+          # Codex runtime state must be owned by the account that starts Codex.
+          # The runner group retains access for the action's proxy configuration.
+          sudo chown -R codex-ci:runner /home/codex-ci/.codex
           sudo chmod -R g+rwX /home/codex-ci/.codex
+          sudo -u codex-ci -- test -O /home/codex-ci/.codex
+          sudo -u codex-ci -- test -w /home/codex-ci/.codex
       # Keep the agent last; subsequent checks run on a fresh runner without an API key.
       - name: Analyze logs and propose a minimal repair
         id: codex
