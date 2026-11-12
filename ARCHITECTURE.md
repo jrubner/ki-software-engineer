@@ -134,6 +134,26 @@ outdated-input warning for `permission-profile` excluded. Application builds and
 browser regressions were not rerun for this automation-only change. No paid
 repair request, repair PR, or failure notification has been exercised live yet.
 
+The subsequent isolated live test on 2026-11-12 supersedes that untested state:
+[test PR #15](https://github.com/jrubner/ki-software-engineer/pull/15) introduced
+one extra closing parenthesis, locally confirmed as TypeScript TS1005.
+[CI run 43185250566](https://github.com/jrubner/ki-software-engineer/actions/runs/43185250566)
+failed and automatically triggered
+[repair run 43185416779](https://github.com/jrubner/ki-software-engineer/actions/runs/43185416779).
+Preparation passed, but Codex failed to initialize its in-process app-server with
+`Permission denied`, before producing a repair. Independent verification and
+publication were skipped. Notification succeeded and created
+[issue #16](https://github.com/jrubner/ki-software-engineer/issues/16).
+No repair PR or successful end-to-end repair is verified.
+
+The custom Codex home was owned by `runner`, unlike the account executing Codex.
+The proposed correction assigns it to `codex-ci`, retains runner-group write
+access for action configuration, and checks ownership and write access as
+`codex-ci` before starting the action. This is a candidate correction pending
+a fresh Linux live test after merge, not a confirmed resolution. The existing
+issue-implementation workflow uses the same ownership pattern and was not changed
+as part of this CI-repair test.
+
 ### Refactoring verification (2026-11-09)
 
 - Extracted the list and detail templates without changing component logic, bindings, styles, or UI text. The extraction checked exact content before formatting; final review compared both templates after identical Angular formatting and verified that replacing the template declaration is the only TypeScript change.
