@@ -11,9 +11,9 @@ Stand: 12.11.2026. Punkte erst abhaken, wenn das erwartete Ergebnis tatsächlich
 
 ## 1. Voraussetzung: PR #11 ist gemerged
 
-- [ ] [PR #11](https://github.com/jrubner/ki-software-engineer/pull/11) prüfen.
-  - Erwartet: `Repository validation` ist für den neuesten Commit grün.
-  - Der bisherige Fehler beim Veröffentlichen des PR-Reviews ist bekannt; die Korrektur steckt in diesem PR.
+- [x] [PR #11](https://github.com/jrubner/ki-software-engineer/pull/11) wurde geprüft und gemerged.
+  - Ergebnis: `Repository validation` war für den letzten PR-Commit erfolgreich; auch der Lauf auf `main` nach dem Merge war erfolgreich.
+  - Die Korrektur der Review-Veröffentlichung ist integriert. Der erste neue Review-Lauf auf PR #13 einschließlich Veröffentlichung war erfolgreich.
 - [x] PR #11 wurde gemerged; die Korrekturen sind auf `main` verfügbar.
   - Die Abschnitte 2–4 können jetzt mit neuen Läufen geprüft werden.
   - Neue PRs bleiben bis zu einer gesonderten Merge-Freigabe offen.
@@ -35,6 +35,8 @@ Stand: 12.11.2026. Punkte erst abhaken, wenn das erwartete Ergebnis tatsächlich
   - Den erzeugten PR und Issue #12 bis zu einer späteren Merge-Entscheidung offen lassen.
 
 ## 3. PR-Review und Aktualisierung – nach dem Merge von PR #11
+
+Für einen unabhängigen Test ohne Feature-Umsetzung wird bereits [Dokumentations-PR #13](https://github.com/jrubner/ki-software-engineer/pull/13) verwendet. Sein [erster automatischer Review-Lauf](https://github.com/jrubner/ki-software-engineer/actions/runs/43180574889) war erfolgreich und der Bot-Kommentar ist sichtbar. Die Aktualisierung desselben Kommentars wird mit einem Folge-Commit geprüft. Der Review des später erzeugten Feature-PRs bleibt ein eigener Prüfschritt.
 
 - [ ] Den erzeugten Feature-PR aus Abschnitt 2 verwenden und auf sein automatisches Review warten.
   - Falls es ausbleibt: **Actions → Pull Request Review with Codex → Run workflow**, Branch `main`, die PR-Nummer eintragen, `head_sha` leer lassen.

@@ -2,9 +2,7 @@
 
 Reviewed on **2026-11-11**. Scope: the **13 active tasks from Prompt Engineering through Review GitHub Pull Requests**, inclusive, in the [classroom task list](https://workshops.de/classroom/9007582545/tasks). The [classroom chat](https://workshops.de/classroom/9007582545/chat#last_message) was also inspected through the existing, authenticated Chrome connection.
 
-## Remediation update (2026-11-11)
-
-### Integration update (2026-11-12)
+## Current integration status (2026-11-12)
 
 PR #11 was merged into `main` as `662c80b800d42ee3c645a9e97b468c05ca9dfe8f`.
 The fixes described below are now integrated. Earlier statements about PR #11
@@ -13,6 +11,21 @@ verify review publication and updates, and the complete issue implementation
 pipeline. The documentation PR tests repository validation and automatic review;
 it does not exercise issue implementation. New PRs remain subject to separate
 merge authorization.
+
+The automatic review for documentation PR #13 completed successfully in
+[run 43180574889](https://github.com/jrubner/ki-software-engineer/actions/runs/43180574889).
+Both `review` and `publish` succeeded, and the
+[bot comment](https://github.com/jrubner/ki-software-engineer/pull/13#issuecomment-6818307779)
+is visible. This verifies the publisher permission correction. Updating the same
+comment after a follow-up commit and automatic issue implementation still require
+separate live evidence.
+
+## Historical remediation snapshot (2026-11-11)
+
+Everything in this section, including its subsections, describes the state before
+PR #11 was merged. Pending-merge statements here are historical, not current
+instructions. Use the current integration status above and the manual validation
+checklist for the next steps.
 
 This section supersedes the audit snapshot below. The user authorized the
 remediation plan, paid demonstration runs, and browser merges of pre-existing PRs
