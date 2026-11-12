@@ -16,6 +16,9 @@
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the current application structure, dependencies, data flow, and known limitations.
 
+For Codex integration, see the [official Angular CLI MCP setup](docs/angular-cli-mcp.md)
+and the [custom component-generation and migration tools](docs/angular-workshop-mcp.md).
+
 ## Local Development
 
 | Command       | Description                                      |

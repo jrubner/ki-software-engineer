@@ -32,6 +32,10 @@ best practices before changing code. No separate MCP login or OpenAI API key is
 required by this local server. It does not start a development server in this
 configuration or configure GitHub Actions.
 
+Workshop task 1572 adds a separate [custom Angular MCP server](angular-workshop-mcp.md)
+with component generation and migration tools. It can be registered alongside
+this read-only server.
+
 ## Application modernisation
 
 The application now uses built-in template control flow, signal inputs,
