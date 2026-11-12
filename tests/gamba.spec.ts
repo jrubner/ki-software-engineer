@@ -240,9 +240,14 @@ test('two landed scatters focus only the remaining reels and slow their stops in
   expect(rolling.last).toBeGreaterThan(rolling.first);
   expect(rolling.steps).toBeGreaterThan(3);
   await expect(page.getByRole('button', { name: 'Change total bet' })).toBeDisabled();
-  await expect(page.locator('.reel').nth(3)).toHaveClass(/reel-focused/);
+  // Sample faster than the transient focus window of each remaining reel.
+  await expect
+    .poll(() => page.locator('.reel').nth(3).getAttribute('class'), { intervals: [50] })
+    .toMatch(/reel-focused/);
   await expect(page.locator('.reel-spinning')).toHaveCount(2);
-  await expect(page.locator('.reel').nth(4)).toHaveClass(/reel-focused/);
+  await expect
+    .poll(() => page.locator('.reel').nth(4).getAttribute('class'), { intervals: [50] })
+    .toMatch(/reel-focused/);
   await expect(page.locator('.reel-spinning')).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'SPIN', exact: true })).toBeEnabled();
   await expect(page.locator('.reel-focused')).toHaveCount(0);

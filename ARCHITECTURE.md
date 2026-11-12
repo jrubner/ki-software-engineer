@@ -425,3 +425,11 @@ because Playwright 1.55 cannot install Chromium on the Ubuntu 26.04 runner selec
 by `ubuntu-latest` (run `43087080538`). PR #11 corrects the publisher scope and pins
 Ubuntu 24.04. Neither end-to-end publishing nor automatic implementation is
 verified until those corrections reach `main` and the live runs succeed.
+
+### Branch integration verification (2026-11-12)
+
+- Integrated the Angular modernization and workshop documentation into Book of CK. Route resolution preserves lazy-loaded book pages and the game before the wildcard route.
+- Development and production builds passed, as did all six Angular unit tests, 61 automation checks, and the complete 51-case Chromium engine/application suite. Production initial bundle: 382.12 kB; lazy game chunk: 50.04 kB. The existing 7.78 kB game stylesheet warning remains below the unchanged 8 kB error budget.
+- The initial browser run passed 50 cases and missed one transient anticipation focus state. Three isolated repeats confirmed the polling issue. Sampling the same class assertions every 50 ms passed three targeted repeats and the full 51-case rerun; production animation behavior was unchanged.
+- Whitespace checks and formatting with the checkout's existing line endings passed. Existing services were reused. No screenshots were taken; Firefox and WebKit were not run.
+- GitHub repository validation passed for the modernization and documentation pull requests. Automated Codex review remains blocked by an invalidated `OPENAI_API_KEY` repository secret (HTTP 401); a maintainer must replace that secret before review can run successfully.
