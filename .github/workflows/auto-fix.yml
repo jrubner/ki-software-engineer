@@ -1,0 +1,224 @@
+name: Auto-Fix CI Failures with Codex
+
+on:
+  workflow_run:
+    workflows: ['Repository Validation']
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: codex-ci-auto-fix-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      attempt: ${{ steps.context.outputs.attempt }}
+      repair: ${{ steps.context.outputs.repair }}
+      sha: ${{ steps.context.outputs.sha }}
+      branch: ${{ steps.context.outputs.branch }}
+      run_id: ${{ steps.context.outputs.run_id }}
+      failure_context: ${{ steps.context.outputs.failure_context }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Authorize failure and collect bounded job logs
+        id: context
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { prepare } = require('./.github/scripts/ci-auto-fix.cjs');
+            await prepare({ github, context, core });
+
+  repair:
+    needs: prepare
+    if: needs.prepare.outputs.repair == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.codex.outputs.final-message }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Install failed revision dependencies without write credentials
+        working-directory: source
+        run: |
+          npm ci
+          node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Write failure context
+        env:
+          FAILURE_CONTEXT: ${{ needs.prepare.outputs.failure_context }}
+        run: node -e "require('node:fs').writeFileSync('.github/codex/ci-failure.json', process.env.FAILURE_CONTEXT)"
+      - name: Prepare unprivileged Codex account
+        run: |
+          sudo adduser --system --home /home/codex-ci --shell /bin/bash --group codex-ci
+          sudo usermod -a -G codex-ci runner
+          sudo usermod -a -G runner codex-ci
+          sudo chown -R runner:codex-ci "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
+          sudo mkdir -p /home/codex-ci/.cache /home/codex-ci/.codex
+          sudo cp -a /home/runner/.cache/ms-playwright /home/codex-ci/.cache/
+          sudo chown -R codex-ci:codex-ci /home/codex-ci/.cache
+          sudo tee /home/codex-ci/.codex/config.toml > /dev/null <<'EOF'
+          [permissions.ci-repair]
+          extends = ":workspace"
+          [permissions.ci-repair.network]
+          enabled = true
+          EOF
+          sudo chown -R runner:codex-ci /home/codex-ci/.codex
+          sudo chmod -R g+rwX /home/codex-ci/.codex
+      # Keep the agent last; subsequent checks run on a fresh runner without an API key.
+      - name: Analyze logs and propose a minimal repair
+        id: codex
+        uses: openai/codex-action@1d82a3dba7c7988ec71ecae1ed5b8e8db96495c5 # v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.6-luna
+          prompt-file: .github/codex/prompts/ci-auto-fix.md
+          output-schema-file: .github/codex/issue-implementation.schema.json
+          codex-home: /home/codex-ci/.codex
+          permission-profile: ci-repair
+          safety-strategy: unprivileged-user
+          codex-user: codex-ci
+          allow-bots: true
+
+  verify:
+    needs: [prepare, repair]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      digest: ${{ steps.result.outputs.digest }}
+      verified: ${{ steps.checked.outputs.verified }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate structured result and protected paths
+        id: result
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          CODEX_RESULT: ${{ needs.repair.outputs.result }}
+        with:
+          script: |
+            const { validateRepair } = require('./.github/scripts/ci-auto-fix.cjs');
+            const { digest } = require('./.github/scripts/issue-implementation.cjs');
+            const result = validateRepair(process.env.CODEX_RESULT);
+            core.setOutput('status', result.status);
+            core.setOutput('digest', digest(process.env.CODEX_RESULT));
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: steps.result.outputs.status == 'implemented'
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        if: steps.result.outputs.status == 'implemented'
+        with:
+          node-version: '22'
+      - name: Install original dependencies before reconstructing output
+        if: steps.result.outputs.status == 'implemented'
+        working-directory: source
+        run: |
+          npm ci
+          node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Reconstruct bounded repair using trusted helper
+        if: steps.result.outputs.status == 'implemented'
+        env:
+          CODEX_RESULT: ${{ needs.repair.outputs.result }}
+        run: node .github/scripts/ci-auto-fix.cjs apply
+      - name: Run the same checks as Repository Validation
+        if: steps.result.outputs.status == 'implemented'
+        working-directory: source
+        run: |
+          node --test .github/scripts/*.test.cjs
+          npm test -- --watch=false --browsers=ChromeHeadless
+          node node_modules/@angular/cli/bin/ng.js build --configuration development
+          npm run build
+          node -e "require('../.github/scripts/issue-implementation.cjs').runApplicationTests(process.cwd())"
+          git add --intent-to-add -- src tests docs public ARCHITECTURE.md README.md
+          if [ -f REFACTORING.md ]; then git add --intent-to-add -- REFACTORING.md; fi
+          git diff --check
+      - name: Record independent verification
+        id: checked
+        if: steps.result.outputs.status == 'implemented'
+        run: echo 'verified=true' >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: [prepare, repair, verify]
+    if: needs.verify.outputs.verified == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Publish verified repair PR and queue CI
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          FAILED_RUN_ID: ${{ needs.prepare.outputs.run_id }}
+          FAILED_BRANCH: ${{ needs.prepare.outputs.branch }}
+          FAILED_SHA: ${{ needs.prepare.outputs.sha }}
+          CODEX_RESULT: ${{ needs.repair.outputs.result }}
+          VERIFIED: ${{ needs.verify.outputs.verified }}
+          VERIFIED_DIGEST: ${{ needs.verify.outputs.digest }}
+        with:
+          script: |
+            const { publish } = require('./.github/scripts/ci-auto-fix.cjs');
+            await publish({ github, context, core });
+
+  notify-failure:
+    needs: [prepare, repair, verify, publish]
+    if: >-
+      always() && needs.prepare.outputs.attempt == 'true' &&
+      (needs.prepare.result == 'failure' || needs.repair.result != 'success' ||
+       needs.verify.outputs.verified != 'true' || needs.publish.result != 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Create deduplicated manual-intervention issue
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          FAILED_RUN_ID: ${{ needs.prepare.outputs.run_id }}
+          CODEX_RESULT: ${{ needs.repair.outputs.result }}
+        with:
+          script: |
+            const { notify } = require('./.github/scripts/ci-auto-fix.cjs');
+            await notify({ github, context, core });

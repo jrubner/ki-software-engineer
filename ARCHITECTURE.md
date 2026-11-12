@@ -102,6 +102,38 @@ defers issue closure until merge. See the workflow documentation for supported
 paths, size limits, retries, and prerequisites. Source inspection and mocked
 helper tests do not establish a successful live implementation run.
 
+### Self-healing CI design (2026-11-12)
+
+The [CI repair workflow](.github/workflows/auto-fix.yml) watches failed
+`Repository Validation` runs through `workflow_run`. Its trusted controls come
+from the default-branch checkout; the exact failed revision is reconstructed
+separately in `source/`. Preparation authorizes the initiating maintainer and
+collects bounded log tails. Codex, independent verification, Git publication,
+and failure notification use separate jobs. Only the agent receives the OpenAI
+key; only the publisher can create code and PRs. The fixed model remains
+`gpt-5.6-luna`.
+
+The publisher requires a verified output digest and an unchanged target revision,
+creates one minimal `fix(ci)` commit on a new repair branch, and opens a PR to
+the failed branch. It explicitly dispatches secret-free validation, never merges,
+and never force-pushes. Unsupported or failed attempts create a deduplicated
+manual-intervention issue. Existing output size/path guards are reused, so
+dependency, workflow, and build/test configuration changes require human work.
+Repair branches, recognized repair commits, and reruns are excluded to bound
+automatic attempts. See the [workflow documentation](docs/codex-github-actions.md)
+for activation requirements, limits, and isolated-branch live-test instructions.
+
+This is a source-confirmed design, not evidence of a successful live repair.
+The workflow cannot activate until it is present on the default branch.
+Application code and dependencies are unchanged.
+
+Local verification on 2026-11-12 passed all 61 Node helper tests (24 new repair
+tests), Prettier for the new automation files and workflow documentation, and
+`git diff --check`. Actionlint 1.7.12 passed all six workflows with its known
+outdated-input warning for `permission-profile` excluded. Application builds and
+browser regressions were not rerun for this automation-only change. No paid
+repair request, repair PR, or failure notification has been exercised live yet.
+
 ### Refactoring verification (2026-11-09)
 
 - Extracted the list and detail templates without changing component logic, bindings, styles, or UI text. The extraction checked exact content before formatting; final review compared both templates after identical Angular formatting and verified that replacing the template declaration is the only TypeScript change.
