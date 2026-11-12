@@ -13,11 +13,4 @@ import { AutoHideHeaderDirective } from './shared/auto-hide-header.directive';
 export class App {
   protected readonly title = 'BookMonkey';
   protected readonly theme = inject(ThemeService);
-
-  protected changeTheme(event: Event): void {
-    const preference = (event.target as HTMLSelectElement).value;
-    if (preference === 'system' || preference === 'light' || preference === 'dark') {
-      this.theme.setPreference(preference);
-    }
-  }
 }

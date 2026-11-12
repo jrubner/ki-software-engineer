@@ -21,6 +21,16 @@
 }
 
 @layer base {
+  html,
+  body,
+  app-root :where(*) {
+    transition:
+      background-color 240ms ease-out,
+      color 240ms ease-out,
+      border-color 240ms ease-out,
+      box-shadow 240ms ease-out;
+  }
+
   html {
     color-scheme: light;
     background: var(--color-canvas);
@@ -130,5 +140,14 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  html,
+  body,
+  app-root :where(*) {
+    /* Retain a brief color fade without spatial motion. */
+    transition-property: background-color, color, border-color, box-shadow;
+    transition-duration: 180ms !important;
+    transition-timing-function: ease-out;
   }
 }

@@ -1,0 +1,281 @@
+<section #game class="gamba-page" [class.is-fullscreen]="fullscreen()">
+  @if (bonus(); as award) {
+    <app-free-spin-bonus
+      [selected]="award.symbol"
+      [retrigger]="award.retrigger"
+      [speed]="speed()"
+      [autoplay]="autoPlaying()"
+      (stopAutoplay)="stopAuto()"
+      (completed)="continueBonus()"
+    />
+  }
+  <div class="game-heading">
+    <a routerLink="/" class="back-link">← Back to the library</a>
+    <span class="demo-badge"><span></span> PLAY FOR FUN · VIRTUAL CREDITS</span>
+    <button type="button" class="fullscreen-button" (click)="toggleFullscreen()" [attr.aria-pressed]="fullscreen()">
+      {{ fullscreen() ? '⛶ Exit fullscreen' : '⛶ Fullscreen' }}
+    </button>
+  </div>
+  @if (fullscreenError()) {
+    <p role="alert">{{ fullscreenError() }}</p>
+  }
+
+  <div class="title-block">
+    <p class="chapter-label">THE LOST CHAPTER · EST. MMXXVI</p>
+    <h1>Book of <span>CK</span></h1>
+    <p>Five reels. One ancient story. A little modern magic.</p>
+  </div>
+
+  <div
+    class="slot-cabinet"
+    [class.bonus-active]="freeSpins() > 0 || expanding()"
+    [class.expanding-now]="expandingNow()"
+    [class.has-win]="!spinning() && lastWin() > 0"
+    [class.anticipating]="anticipating() && focusReel() >= 0"
+    [class.scatters-celebrating]="celebratingScatters()"
+  >
+    <div class="cabinet-top">
+      <span class="ornament">✦ ───── ✦</span>
+      <span>{{ freeSpins() > 0 ? 'THE FREE SPINS CHAPTER' : 'TEMPLE OF THE GOLDEN BOOK' }}</span>
+      <button
+        type="button"
+        class="rules-button"
+        (click)="rulesOpen.set(!rulesOpen())"
+        [attr.aria-expanded]="rulesOpen()"
+        aria-controls="game-rules"
+      >
+        How to play <span>↗</span>
+      </button>
+    </div>
+
+    @if (expanding()) {
+      <div class="bonus-dashboard" aria-label="Free spin progress">
+        <span
+          ><strong>{{ freeSpins() }}</strong> FREE SPINS LEFT</span
+        >
+        <span
+          >EXPANDING: <strong>{{ symbol(expanding()!).label }}</strong></span
+        >
+        <span
+          >BONUS WIN <strong>{{ bonusTotal() | number: '1.0-2' }}</strong></span
+        >
+      </div>
+    }
+
+    <div class="reel-frame">
+      <div
+        class="reel-grid"
+        role="group"
+        aria-label="Slot machine: five reels, three rows"
+        [attr.aria-busy]="spinning()"
+      >
+        @for (reel of grid(); track $index; let x = $index) {
+          <div
+            class="reel"
+            [class.reel-spinning]="spinning() && stopped() <= x"
+            [class.reel-expanded]="expandedReels().includes(x)"
+            [class.reel-pending]="anticipating() && spinning() && stopped() <= x"
+            [class.reel-focused]="focusReel() === x"
+          >
+            <div class="settled-symbols">
+              @for (id of reel; track $index; let y = $index) {
+                <div
+                  class="symbol-cell"
+                  [class.winning]="winningCells().includes(x + '-' + y)"
+                  [attr.data-symbol]="id"
+                  role="img"
+                  [attr.aria-label]="'Reel ' + (x + 1) + ', row ' + (y + 1) + ': ' + symbol(id).label"
+                >
+                  @if (id === 'ivoris') {
+                    <img src="/gamba/ivoris-icon.svg" alt="" class="scatter-icon" />
+                    <span class="symbol-caption">FREE SPINS</span>
+                  } @else if (id === 'book' || id === 'pharaoh' || id === 'scarab' || id === 'ankh') {
+                    <svg class="picture-symbol" aria-hidden="true" viewBox="0 0 100 100">
+                      <use [attr.href]="'/gamba/symbols.svg#' + id" />
+                    </svg>
+                  } @else {
+                    <span class="card-symbol">{{ symbol(id).glyph }}</span>
+                  }
+                </div>
+              }
+            </div>
+            @if (expandedReels().includes(x) && expanding()) {
+              <div
+                #expansion
+                class="expanding-overlay"
+                role="img"
+                [attr.aria-label]="'Expanded ' + symbol(expanding()!).label"
+              >
+                @if (
+                  expanding() === 'book' ||
+                  expanding() === 'pharaoh' ||
+                  expanding() === 'scarab' ||
+                  expanding() === 'ankh'
+                ) {
+                  <svg class="expanded-picture" viewBox="0 0 100 100" aria-hidden="true">
+                    <use [attr.href]="'/gamba/symbols.svg#' + expanding()" />
+                  </svg>
+                } @else {
+                  <span>{{ symbol(expanding()!).glyph }}</span>
+                }
+                <small>EXPANDED</small>
+              </div>
+            }
+            @if (spinning() && stopped() <= x) {
+              <div #reelTrack class="moving-strip" aria-hidden="true">
+                @for (id of reelStrips()[x]; track $index) {
+                  <div class="strip-symbol" [attr.data-symbol]="id">
+                    @if (id === 'ivoris') {
+                      <img class="scatter-icon" src="/gamba/ivoris-icon.svg" alt="" />
+                    } @else if (id === 'book' || id === 'pharaoh' || id === 'scarab' || id === 'ankh') {
+                      <svg class="picture-symbol" viewBox="0 0 100 100">
+                        <use [attr.href]="'/gamba/symbols.svg#' + id" />
+                      </svg>
+                    } @else {
+                      <span class="card-symbol">{{ symbol(id).glyph }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+      <span class="frame-corner top-left"></span><span class="frame-corner top-right"></span>
+      <span class="frame-corner bottom-left"></span><span class="frame-corner bottom-right"></span>
+    </div>
+
+    <div class="result-bar" role="status" aria-live="polite" aria-atomic="true">
+      <span class="result-star">✦</span>
+      <span>{{ message() }}</span>
+      <span class="result-star">✦</span>
+    </div>
+    @if (winningLines().length) {
+      <div class="winning-lines">Winning lines: {{ winningLines().join(' · ') }}</div>
+    }
+
+    <div class="controls">
+      <div class="meter">
+        <span>CREDITS</span><strong data-testid="credits">{{ credits() | number: '1.0-2' }}</strong
+        ><small>Virtual balance</small>
+      </div>
+      <button
+        type="button"
+        class="bet-control meter"
+        (click)="changeBet()"
+        [disabled]="spinning() || freeSpins() > 0 || autoPlaying()"
+        aria-label="Change total bet"
+      >
+        <span>TOTAL BET <span>↻</span></span
+        ><strong>{{ bet() }}</strong
+        ><small>10 fixed lines</small>
+      </button>
+      <button
+        type="button"
+        class="spin-button"
+        aria-keyshortcuts="Space"
+        (click)="spin()"
+        [disabled]="spinning() || autoPlaying() || (freeSpins() === 0 && credits() < bet())"
+      >
+        <span class="spin-icon" aria-hidden="true" [class.turning]="spinning()">↻</span
+        ><span>{{ spinning() ? 'SPINNING' : freeSpins() > 0 ? 'FREE SPIN' : 'SPIN' }}</span>
+      </button>
+      <div class="meter win-meter">
+        <span>LAST WIN</span><strong data-testid="last-win">{{ lastWin() | number: '1.0-2' }}</strong
+        ><small>{{ freeSpins() > 0 ? 'Bonus in progress' : 'Credits won' }}</small>
+      </div>
+    </div>
+    <div class="playback-controls">
+      <button type="button" class="speed-button" aria-label="Spin speed" (click)="changeSpeed()">
+        Speed: {{ speed() }}
+      </button>
+      <label
+        >Autospin
+        <select
+          aria-label="Autospin count"
+          [value]="autoCount()"
+          (change)="selectAutoCount($event)"
+          [disabled]="autoPlaying()"
+        >
+          @for (count of autoCounts; track count) {
+            <option [value]="count">{{ count }} spins</option>
+          }
+        </select>
+      </label>
+      @if (autoPlaying()) {
+        <button type="button" class="auto-button" (click)="stopAuto()">
+          Stop autospin · {{ autoRemaining() }} left
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="auto-button"
+          (click)="startAuto()"
+          [disabled]="spinning() || !!bonus() || (freeSpins() === 0 && credits() < bet())"
+        >
+          Start autospin
+        </button>
+      }
+      <p aria-live="polite" class="auto-message">{{ autoMessage() }}</p>
+    </div>
+    <div class="cabinet-bottom">
+      <span>✦ 5 REELS · 10 LINES ✦</span
+      ><button type="button" (click)="reset()" [disabled]="spinning() || freeSpins() > 0 || autoPlaying()">
+        Reset credits
+      </button>
+    </div>
+  </div>
+
+  <div class="feature-strip">
+    <div class="feature-icon"><img src="/gamba/ivoris-icon.svg" alt="Ivoris" /></div>
+    <div>
+      <p class="chapter-label">UNLOCK THE NEXT CHAPTER</p>
+      <h2>{{ freeSpins() > 0 ? freeSpins() + ' free spins remaining' : 'Three icons. Ten free spins.' }}</h2>
+      <p>Land 3 or more Ivoris icons anywhere to unlock the bonus.</p>
+    </div>
+    @if (expanding()) {
+      <div class="bonus-symbol">
+        <span>{{ symbol(expanding()!).glyph }}</span
+        ><small>EXPANDING SYMBOL · {{ symbol(expanding()!).label }}</small
+        ><strong>Bonus win: {{ bonusTotal() | number: '1.0-2' }}</strong>
+      </div>
+    } @else {
+      <span class="feature-count">+10<span>FREE SPINS</span></span>
+    }
+  </div>
+
+  @if (rulesOpen()) {
+    <section id="game-rules" class="game-rules" aria-label="Game rules">
+      <h2>The rules of the temple</h2>
+      <p>
+        Start with 1,000 virtual credits. Choose a total bet of 10, 20, 50 or 100. Each spin divides it equally across
+        10 fixed lines. Match 3 or more symbols from the leftmost reel. Ivoris icons are wild and substitute for every
+        regular symbol. Books are regular symbols. Only the highest win per line is paid.
+      </p>
+      <p>
+        Three, four or five Ivoris icons anywhere pay 2×, 10× or 50× the total bet and award 10 free spins. Scatter wins
+        are added to line wins. Free spins keep the triggering bet and cost no credits. Three or more icons during the
+        bonus add another 10 spins.
+      </p>
+      <p>
+        At the start of the bonus, one regular symbol is chosen. If it appears on 3 or more reels during a free spin, it
+        expands across those reels and pays on every line, even when the reels are not adjacent. Each line pays the
+        higher of its normal win and its expansion win.
+      </p>
+      <div class="paytable">
+        <span>SYMBOL</span><span>3 / 4 / 5 MATCHES · × LINE BET</span>
+        @for (symbol of symbols; track symbol.id) {
+          @if (symbol.id !== 'ivoris') {
+            <strong>{{ symbol.label }}</strong
+            ><span>{{ symbol.payouts.join(' / ') }}</span>
+          }
+        }
+      </div>
+      <p class="rules-note">
+        Independent random reel stops. No real money, purchases or payouts. Refreshing the page starts a new session.
+        This is an unofficial workshop game.
+      </p>
+    </section>
+  }
+  <p class="game-footnote">Press Space to spin. All credits are fictional.</p>
+</section>

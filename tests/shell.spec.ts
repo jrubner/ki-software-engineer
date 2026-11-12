@@ -157,7 +157,7 @@ test('keyboard focus keeps a hovered header open until focus leaves it', async (
   await page.mouse.move(600, 4);
   await expectHeaderOnscreen(page);
   await page
-    .getByRole('combobox', { name: 'Color theme' })
+    .getByRole('button', { name: 'Dark mode', exact: true })
     .evaluate(element => (element as HTMLElement).focus({ preventScroll: true }));
   await page.mouse.move(600, 300);
   await expectHeaderOnscreen(page);
@@ -171,7 +171,7 @@ test('keyboard focus reveals the hidden header and route changes keep navigation
   await page.getByRole('textbox').evaluate(element => (element as HTMLInputElement).focus({ preventScroll: true }));
   await expectHeaderHidden(page);
   await page.keyboard.press('Shift+Tab');
-  await expect(page.getByRole('combobox', { name: 'Color theme' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Dark mode', exact: true })).toBeFocused();
   await expectHeaderOnscreen(page);
   await page.getByRole('link', { name: 'BookMonkey home' }).click();
   await expectHeaderOnscreen(page);
