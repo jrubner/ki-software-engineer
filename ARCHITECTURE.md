@@ -30,7 +30,7 @@ Versions below are declarations from [package.json](package.json); ranges do not
 | Prettier               | 3.6.2                                  | Formatting configured in [.prettierrc](.prettierrc)                                         |
 | Playwright             | ^1.55.0                                | Book detail feature tests with controlled API responses, alongside external-site examples   |
 
-The manifest also declares `@ngrx/signals` 20.0.1, `@angular-architects/ngrx-toolkit` ^20.1.0, and `@tanstack/angular-query-experimental` ^5.85.5. None is imported or configured in the current application source; state lives in fields of [BookListComponent](src/app/books/book-list.component.ts). This was checked against imports throughout `src/` and the providers in [app.config.ts](src/app/app.config.ts).
+The manifest also declares `@ngrx/signals` 20.0.1, `@angular-architects/ngrx-toolkit` ^20.1.0, and `@tanstack/angular-query-experimental` ^5.85.5. None is imported or configured in the current application source; list state uses Angular signals in [BookListComponent](src/app/books/book-list.component.ts). This was checked against imports throughout `src/` and the providers in [app.config.ts](src/app/app.config.ts).
 
 Likewise, `@angular/ssr`, `@angular/platform-server`, and Express are declared, but there is no server entry point or SSR build configuration in [angular.json](angular.json). The implemented application is bootstrapped in the browser. Dependency presence alone does not establish an architectural capability.
 
@@ -51,7 +51,7 @@ Likewise, `@angular/ssr`, `@angular/platform-server`, and Express are declared, 
 | [public/](public/)                                                                   | Static assets copied by the Angular build                                                                  |
 | [tests/](tests/), [tests-examples/](tests-examples/)                                 | BookMonkey feature tests plus Playwright samples; only `tests/` is selected by the current configuration   |
 
-The structure groups the book feature under `books/` and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. The list and detail components keep their larger views in colocated [book-list.component.html](src/app/books/book-list.component.html) and [book-detail.component.html](src/app/books/book-detail.component.html) files; request/state logic remains in the TypeScript components. The shorter card view remains inline. The [route configuration](src/app/app.routes.ts) imports the list and detail components directly, so no lazy-loaded feature boundary is configured. Why the original structure was chosen is not documented in the reviewed files; the detail feature follows it to keep this change scoped.
+The structure groups the book feature under `books/` and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. The list and detail components keep their larger views in colocated [book-list.component.html](src/app/books/book-list.component.html) and [book-detail.component.html](src/app/books/book-detail.component.html) files; request/state logic remains in the TypeScript components. The shorter card view remains inline. The [route configuration](src/app/app.routes.ts) lazy-loads both standalone feature components through `loadComponent`. All components use `OnPush`; templates use built-in control flow, list/card inputs use signal inputs, and list/cover state uses signals. Detail request state remains an Observable consumed by `AsyncPipe`.
 
 ## Agent instructions and refactoring review
 
@@ -164,6 +164,29 @@ as part of this CI-repair test.
 
 ## Runtime and data flow
 
+### Angular CLI MCP modernisation verification (2026-11-12)
+
+The user-authorised task 1569 used the installed Angular CLI MCP 20.2.0 server's
+actual `list_projects` and `get_best_practices` responses. Personal Codex MCP
+configuration was backed up and registered outside this repository. Its setup
+and the applied conventions are documented in [Angular CLI MCP with Codex](docs/angular-cli-mcp.md).
+No dependencies, application URLs, search timing, theme initialization, API
+contracts, or business behavior were intentionally changed. The existing list
+request/timer lifecycle limitations remain deferred.
+
+Development and production builds passed. Production output has a 360.67 kB
+initial bundle and separate lazy list/detail chunks. All six Angular unit tests
+and all 21 existing Chromium application tests passed. Two new list tests protect
+nondefault page size, asynchronous loading/empty rendering, 300 ms search timing,
+and immediate clearing. The running development server was verified by process
+command line and reused; no service restart was needed. Prettier passed for all
+changed application files and the new setup guide; `git diff --check` passed.
+Transient stale Vite
+overlays were cleared by recompiling unchanged/completed source before successful
+full reruns; see [REFACTORING.md](REFACTORING.md). These results supersede the
+historical eager-route/mutable-state description and four-test count for current
+application code while retaining the dated earlier evidence.
+
 ```text
 src/main.ts -> App + appConfig -> RouterOutlet -> BookListComponent
                                                    |
@@ -175,14 +198,14 @@ src/main.ts -> App + appConfig -> RouterOutlet -> BookListComponent
                                                    |
                                            Observable<Book[]>
                                                    |
-                                  component fields -> BookItemComponent[]
+                                  component signals -> BookItemComponent[]
 ```
 
 The following flow is supported by [BookListComponent](src/app/books/book-list.component.ts), [BookApiClient](src/app/books/book-api-client.service.ts), and [BookItemComponent](src/app/books/book-item.component.ts):
 
 1. `BookListComponent.ngOnInit()` loads books with its `pageSize` input, which defaults to 10.
 2. `BookApiClient.getBooks()` sends `GET http://localhost:4730/books` with `_limit`. When a search term is present, it also sends `q`. The API implementation and its exact search semantics are outside this repository. A local title search was observed to work; the service comment about searching title and author is not proof of the full server-side search contract.
-3. The component subscribes directly, stores the response in `books`, and clears `loading`. Each book is passed to a presentation component; `trackById` uses its `id`.
+3. The component subscribes directly, updates the `books` and `loading` signals, and renders with `OnPush`. Each book is passed to a presentation component with a required signal input; `@for` tracks its `id`.
 4. Search uses `FormsModule` and two-way `ngModel` binding. Changes reset a 300 ms timeout before requesting results. Clearing the search immediately reloads the default list.
 5. While loading, the UI shows a spinner. An empty array produces an empty state. Request errors are logged to the console and clear `loading`; there is no dedicated error message or retry control.
 

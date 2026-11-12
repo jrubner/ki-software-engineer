@@ -6,7 +6,6 @@ import { filter } from 'rxjs';
 
 @Directive({
   selector: '[appAutoHideHeader]',
-  standalone: true,
   host: {
     '[class.header-hidden]': 'hidden()',
     '(pointerenter)': 'onPointerEnter($event)',

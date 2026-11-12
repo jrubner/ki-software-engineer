@@ -1,6 +1,6 @@
-import { CommonModule } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, Observable, of, startWith, switchMap } from 'rxjs';
 import { Book } from './book';
@@ -10,21 +10,23 @@ type BookDetailState = { status: 'loading' | 'not-found' | 'error'; book?: never
 
 @Component({
   selector: 'app-book-detail',
-  standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [AsyncPipe, RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-detail.component.html'
 })
 export class BookDetailComponent {
-  readonly state$: Observable<BookDetailState>;
-  coverFailed = false;
+  protected readonly state$: Observable<BookDetailState>;
+  protected readonly coverFailed = signal(false);
+  private readonly route = inject(ActivatedRoute);
+  private readonly bookApiClient = inject(BookApiClient);
 
-  constructor(route: ActivatedRoute, bookApiClient: BookApiClient) {
-    this.state$ = route.paramMap.pipe(
+  constructor() {
+    this.state$ = this.route.paramMap.pipe(
       map(params => params.get('isbn') ?? ''),
       distinctUntilChanged(),
       switchMap(isbn => {
-        this.coverFailed = false;
-        return bookApiClient.getBookByIsbn(isbn).pipe(
+        this.coverFailed.set(false);
+        return this.bookApiClient.getBookByIsbn(isbn).pipe(
           map((book): BookDetailState => ({ status: 'success', book })),
           catchError((error: unknown) =>
             of<BookDetailState>({
