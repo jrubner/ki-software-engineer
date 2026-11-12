@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: Open issue carrying ready-for-implementation
+        description: Open issue carrying ready-for-implementation and implementation-approved
         required: true
         type: string
       fingerprint:
@@ -24,8 +24,10 @@ jobs:
   prepare:
     if: >-
       github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
-      (github.event_name == 'workflow_dispatch' || github.event.label.name == 'ready-for-implementation')
-    runs-on: ubuntu-latest
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.label.name == 'ready-for-implementation' ||
+       github.event.label.name == 'implementation-approved')
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
       contents: read
@@ -39,13 +41,13 @@ jobs:
       sha: ${{ steps.context.outputs.sha }}
       context: ${{ steps.context.outputs.context }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
       - name: Validate authorization, readiness, and duplicate delivery
         id: context
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
             const { prepare } = require('./.github/scripts/issue-implementation.cjs');
@@ -54,18 +56,18 @@ jobs:
   implement:
     needs: prepare
     if: needs.prepare.outputs.implement == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
       contents: read
     outputs:
       result: ${{ steps.codex.outputs.final-message }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22'
           cache: npm
@@ -99,7 +101,7 @@ jobs:
       # No trusted steps run after the agent on this runner.
       - name: Execute Red, Green, Blue, and finalisation
         id: codex
-        uses: openai/codex-action@v1
+        uses: openai/codex-action@1d82a3dba7c7988ec71ecae1ed5b8e8db96495c5 # v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-5.6-luna
@@ -114,7 +116,7 @@ jobs:
   verify:
     needs: [prepare, implement]
     if: needs.prepare.outputs.implement == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
@@ -122,13 +124,13 @@ jobs:
       digest: ${{ steps.result.outputs.digest }}
       verified: ${{ steps.checked.outputs.verified }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
       - name: Validate bounded output and allowed paths
         id: result
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           CODEX_RESULT: ${{ needs.implement.outputs.result }}
         with:
@@ -137,7 +139,7 @@ jobs:
             const result = validateResult(process.env.CODEX_RESULT);
             core.setOutput('status', result.status);
             core.setOutput('digest', digest(process.env.CODEX_RESULT));
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         if: steps.result.outputs.status == 'implemented'
         with:
           node-version: '22'
@@ -159,6 +161,9 @@ jobs:
       - name: Run application regressions and new browser tests
         if: steps.result.outputs.status == 'implemented'
         run: node .github/scripts/issue-implementation.cjs test
+      - name: Run Angular unit tests
+        if: steps.result.outputs.status == 'implemented'
+        run: npm test -- --watch=false --browsers=ChromeHeadless
       - name: Check whitespace including new files
         if: steps.result.outputs.status == 'implemented'
         run: |
@@ -172,7 +177,7 @@ jobs:
 
   publish:
     needs: [prepare, implement, verify]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write
@@ -180,12 +185,12 @@ jobs:
       pull-requests: write
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
       - name: Publish a verified PR or report a blocker
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           ISSUE_NUMBER: ${{ needs.prepare.outputs.issue_number }}
           ISSUE_FINGERPRINT: ${{ needs.prepare.outputs.fingerprint }}
@@ -198,9 +203,9 @@ jobs:
           script: |
             const { publish } = require('./.github/scripts/issue-implementation.cjs');
             await publish({ github, context, core });
-      # GITHUB_TOKEN-created PRs do not trigger another ordinary PR workflow.
+      # Dispatch review explicitly; other PR workflows can require GitHub approval.
       - name: Queue review of the verified implementation PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           ISSUE_NUMBER: ${{ needs.prepare.outputs.issue_number }}
           CODEX_RESULT: ${{ needs.implement.outputs.result }}

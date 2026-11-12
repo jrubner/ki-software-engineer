@@ -314,5 +314,7 @@ test('workflow trust boundary keeps PR head unexecuted and separates the publish
   assert.match(review, /model: gpt-5.6-luna/);
   assert.match(review, /sandbox: read-only/);
   assert.doesNotMatch(publisher, /OPENAI_API_KEY|openai\/codex-action/);
-  assert.match(publisher, /issues: write/);
+  assert.match(publisher, /pull-requests: write/);
+  assert.match(publisher, /issues: read/);
+  assert.doesNotMatch(publisher, /contents: write/);
 });

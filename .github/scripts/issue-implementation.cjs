@@ -104,9 +104,10 @@ async function prepare({
     current.issue.state !== 'open' ||
     current.issue.pull_request ||
     !labeled(current.issue, readyLabel) ||
+    !labeled(current.issue, 'implementation-approved') ||
     labeled(current.issue, 'needs-clarification')
   ) {
-    core.info('Implementation requires an open, ready issue without unresolved clarification.');
+    core.info('Implementation requires an open, ready, explicitly approved issue without unresolved clarification.');
     return;
   }
   const expected = context.payload.inputs?.fingerprint;
@@ -182,6 +183,7 @@ async function publish({ github, context, core, env = process.env }) {
     current.issue.state !== 'open' ||
     current.issue.pull_request ||
     !labeled(current.issue, readyLabel) ||
+    !labeled(current.issue, 'implementation-approved') ||
     labeled(current.issue, 'needs-clarification') ||
     current.fingerprint !== env.ISSUE_FINGERPRINT ||
     base.object.sha !== env.BASE_SHA

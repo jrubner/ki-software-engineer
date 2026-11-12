@@ -139,6 +139,14 @@ async function publish({ github, context, core }) {
     // GITHUB_TOKEN label events do not start another workflow. Dispatch explicitly.
     const { snapshot: implementationSnapshot, requirementData, digest } = require('./issue-implementation.cjs');
     const current = await implementationSnapshot(github, context.repo, number);
+    if (
+      !current.issue.labels.some(
+        label => (typeof label === 'string' ? label : label.name) === 'implementation-approved'
+      )
+    ) {
+      core.info('Analysis is ready; a maintainer must apply implementation-approved before implementation.');
+      return;
+    }
     if (current.fingerprint !== digest(JSON.stringify(requirementData(snapshot.data)))) {
       core.warning('Requirements changed during publication; analyze again before implementation.');
       return;
