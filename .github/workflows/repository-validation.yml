@@ -1,0 +1,44 @@
+name: Repository Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Repository validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Test automation guards
+        run: node --test .github/scripts/*.test.cjs
+      - name: Run Angular unit tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+      - name: Build development and production bundles
+        run: |
+          node node_modules/@angular/cli/bin/ng.js build --configuration development
+          npm run build
+      - name: Run application browser tests
+        run: node .github/scripts/issue-implementation.cjs test
+      - name: Check whitespace
+        run: git diff --check

@@ -1,0 +1,218 @@
+name: Issue Implementation with Codex
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Open issue carrying ready-for-implementation and implementation-approved
+        required: true
+        type: string
+      fingerprint:
+        description: Internal analysis handoff (leave empty for a manual retry)
+        required: false
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: issue-implementation-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: >-
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event.label.name == 'ready-for-implementation' ||
+       github.event.label.name == 'implementation-approved')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      implement: ${{ steps.context.outputs.implement }}
+      issue_number: ${{ steps.context.outputs.issue_number }}
+      fingerprint: ${{ steps.context.outputs.fingerprint }}
+      base: ${{ steps.context.outputs.base }}
+      sha: ${{ steps.context.outputs.sha }}
+      context: ${{ steps.context.outputs.context }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Validate authorization, readiness, and duplicate delivery
+        id: context
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { prepare } = require('./.github/scripts/issue-implementation.cjs');
+            await prepare({ github, context, core, writeContext: text => core.setOutput('context', text) });
+
+  implement:
+    needs: prepare
+    if: needs.prepare.outputs.implement == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    outputs:
+      result: ${{ steps.codex.outputs.final-message }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install trusted base dependencies and Chromium
+        run: |
+          npm ci
+          node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Write issue context
+        env:
+          ISSUE_CONTEXT: ${{ needs.prepare.outputs.context }}
+        run: node -e "require('node:fs').writeFileSync('.github/codex/implementation-context.json', process.env.ISSUE_CONTEXT)"
+      - name: Prepare an unprivileged Codex user
+        run: |
+          sudo adduser --system --home /home/codex-ci --shell /bin/bash --group codex-ci
+          sudo usermod -a -G codex-ci runner
+          sudo usermod -a -G runner codex-ci
+          sudo chown -R runner:codex-ci "$GITHUB_WORKSPACE"
+          sudo chmod -R g+rwX "$GITHUB_WORKSPACE"
+          sudo mkdir -p /home/codex-ci/.cache
+          sudo cp -a /home/runner/.cache/ms-playwright /home/codex-ci/.cache/
+          sudo chown -R codex-ci:codex-ci /home/codex-ci/.cache
+          sudo mkdir -p /home/codex-ci/.codex
+          sudo tee /home/codex-ci/.codex/config.toml > /dev/null <<'EOF'
+          [permissions.ci-implementation]
+          extends = ":workspace"
+          [permissions.ci-implementation.network]
+          enabled = true
+          EOF
+          sudo chown -R runner:codex-ci /home/codex-ci/.codex
+          sudo chmod -R g+rwX /home/codex-ci/.codex
+      # No trusted steps run after the agent on this runner.
+      - name: Execute Red, Green, Blue, and finalisation
+        id: codex
+        uses: openai/codex-action@1d82a3dba7c7988ec71ecae1ed5b8e8db96495c5 # v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.6-luna
+          prompt-file: .github/codex/prompts/issue-implementation.md
+          output-schema-file: .github/codex/issue-implementation.schema.json
+          codex-home: /home/codex-ci/.codex
+          permission-profile: ci-implementation
+          safety-strategy: unprivileged-user
+          codex-user: codex-ci
+          allow-bots: true
+
+  verify:
+    needs: [prepare, implement]
+    if: needs.prepare.outputs.implement == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      digest: ${{ steps.result.outputs.digest }}
+      verified: ${{ steps.checked.outputs.verified }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - name: Validate bounded output and allowed paths
+        id: result
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          CODEX_RESULT: ${{ needs.implement.outputs.result }}
+        with:
+          script: |
+            const { validateResult, digest } = require('./.github/scripts/issue-implementation.cjs');
+            const result = validateResult(process.env.CODEX_RESULT);
+            core.setOutput('status', result.status);
+            core.setOutput('digest', digest(process.env.CODEX_RESULT));
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        if: steps.result.outputs.status == 'implemented'
+        with:
+          node-version: '22'
+      - name: Install trusted dependencies before applying changes
+        if: steps.result.outputs.status == 'implemented'
+        run: |
+          npm ci
+          node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Reconstruct generated files
+        if: steps.result.outputs.status == 'implemented'
+        env:
+          CODEX_RESULT: ${{ needs.implement.outputs.result }}
+        run: node .github/scripts/issue-implementation.cjs apply
+      - name: Verify development and production builds
+        if: steps.result.outputs.status == 'implemented'
+        run: |
+          node node_modules/@angular/cli/bin/ng.js build --configuration development
+          npm run build
+      - name: Run application regressions and new browser tests
+        if: steps.result.outputs.status == 'implemented'
+        run: node .github/scripts/issue-implementation.cjs test
+      - name: Run Angular unit tests
+        if: steps.result.outputs.status == 'implemented'
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+      - name: Check whitespace including new files
+        if: steps.result.outputs.status == 'implemented'
+        run: |
+          git add --intent-to-add -- src tests docs public ARCHITECTURE.md README.md
+          if [ -f REFACTORING.md ]; then git add --intent-to-add -- REFACTORING.md; fi
+          git diff --check
+      - name: Record independent verification
+        id: checked
+        if: steps.result.outputs.status == 'implemented'
+        run: echo 'verified=true' >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: [prepare, implement, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - name: Publish a verified PR or report a blocker
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          ISSUE_NUMBER: ${{ needs.prepare.outputs.issue_number }}
+          ISSUE_FINGERPRINT: ${{ needs.prepare.outputs.fingerprint }}
+          BASE_BRANCH: ${{ needs.prepare.outputs.base }}
+          BASE_SHA: ${{ needs.prepare.outputs.sha }}
+          CODEX_RESULT: ${{ needs.implement.outputs.result }}
+          VERIFIED_DIGEST: ${{ needs.verify.outputs.digest }}
+          VERIFIED: ${{ needs.verify.outputs.verified }}
+        with:
+          script: |
+            const { publish } = require('./.github/scripts/issue-implementation.cjs');
+            await publish({ github, context, core });
+      # Dispatch review explicitly; other PR workflows can require GitHub approval.
+      - name: Queue review of the verified implementation PR
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          ISSUE_NUMBER: ${{ needs.prepare.outputs.issue_number }}
+          CODEX_RESULT: ${{ needs.implement.outputs.result }}
+        with:
+          script: |
+            const { validateResult } = require('./.github/scripts/issue-implementation.cjs');
+            if (validateResult(process.env.CODEX_RESULT).status === 'implemented') {
+              const { queueImplementationReview } = require('./.github/scripts/pull-request-review.cjs');
+              await queueImplementationReview({ github, context, number: process.env.ISSUE_NUMBER });
+            }

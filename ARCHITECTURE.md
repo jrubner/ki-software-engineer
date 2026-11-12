@@ -30,7 +30,7 @@ Versions below are declarations from [package.json](package.json); ranges do not
 | Prettier               | 3.6.2                                  | Formatting configured in [.prettierrc](.prettierrc)                                         |
 | Playwright             | ^1.55.0                                | Book detail feature tests with controlled API responses, alongside external-site examples   |
 
-The manifest also declares `@ngrx/signals` 20.0.1, `@angular-architects/ngrx-toolkit` ^20.1.0, and `@tanstack/angular-query-experimental` ^5.85.5. None is imported or configured in the current application source; state lives in fields of [BookListComponent](src/app/books/book-list.component.ts). This was checked against imports throughout `src/` and the providers in [app.config.ts](src/app/app.config.ts).
+The manifest also declares `@ngrx/signals` 20.0.1, `@angular-architects/ngrx-toolkit` ^20.1.0, and `@tanstack/angular-query-experimental` ^5.85.5. None is imported or configured in the current application source; list state uses Angular signals in [BookListComponent](src/app/books/book-list.component.ts). This was checked against imports throughout `src/` and the providers in [app.config.ts](src/app/app.config.ts).
 
 Likewise, `@angular/ssr`, `@angular/platform-server`, and Express are declared, but there is no server entry point or SSR build configuration in [angular.json](angular.json). The implemented application is bootstrapped in the browser. Dependency presence alone does not establish an architectural capability.
 
@@ -51,11 +51,108 @@ Likewise, `@angular/ssr`, `@angular/platform-server`, and Express are declared, 
 | [public/](public/)                                                                   | Static assets copied by the Angular build                                                                  |
 | [tests/](tests/), [tests-examples/](tests-examples/)                                 | BookMonkey feature tests plus Playwright samples; only `tests/` is selected by the current configuration   |
 
-The structure groups the book feature under `books/` and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. The list and detail components keep their larger views in colocated [book-list.component.html](src/app/books/book-list.component.html) and [book-detail.component.html](src/app/books/book-detail.component.html) files; request/state logic remains in the TypeScript components. The shorter card view remains inline. The [route configuration](src/app/app.routes.ts) imports the list and detail components directly, while `/gamba` uses a separate lazy-loaded component boundary. Why the original structure was chosen is not documented in the reviewed files; the detail feature follows it to keep this change scoped.
+The structure groups the book feature under `books/` and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. The list and detail components keep their larger views in colocated [book-list.component.html](src/app/books/book-list.component.html) and [book-detail.component.html](src/app/books/book-detail.component.html) files; request/state logic remains in the TypeScript components. The shorter card view remains inline. The [route configuration](src/app/app.routes.ts) lazy-loads the list, detail, and game components through `loadComponent`. The root and book components use `OnPush`; templates use built-in control flow, list/card inputs use signal inputs, and list/cover state uses signals. Detail request state remains an Observable consumed by `AsyncPipe`.
 
 ## Agent instructions and refactoring review
 
 [AGENTS.md](AGENTS.md) defines project-wide constraints and an explicitly invoked refactoring workflow. [src/AGENTS.md](src/AGENTS.md) adds source conventions; [src/app/books/AGENTS.md](src/app/books/AGENTS.md) records book-specific contracts. Reading these files does not automatically start the workflow. [REFACTORING.md](REFACTORING.md) records concrete findings, retained design choices, deferred search risks, and verification for the user-authorized workshop task. Personal machine configuration is not part of these repository instructions.
+
+### GitHub issue analysis, implementation, and PR review
+
+The [PR review workflow](.github/workflows/pull-request-review.yml) uses
+`pull_request_target` for opened, updated, and reopened PRs. It checks out only
+the trusted base SHA, collects a bounded API diff and linked issue bodies, and
+runs Codex with `gpt-5.6-luna` in a read-only sandbox under a dedicated user.
+It does not install or run PR code. A fresh publisher without the API key
+rechecks the PR and requirement fingerprint before creating or updating one
+bot comment. Reviews do not approve, merge, or replace application tests.
+Paid automatic reviews require a maintainer event or an own local bot PR;
+fork reviews require an explicit maintainer dispatch on the default branch.
+The implementation publisher explicitly dispatches review for its verified PR,
+with `actions: write` limited to that publisher job. Bot handoffs require the
+expected head SHA. Review instructions and publishing helpers come from the
+base checkout, never the PR head. See the workflow documentation for bounds,
+trust assumptions, and the live verification procedure.
+
+Local workflow verification on 2026-11-11 passed all 36 Node helper tests
+(15 for PR review), the new helper's syntax check, formatting checks for the
+affected automation files, and Actionlint for all four workflows. Actionlint's
+outdated built-in metadata warning for the existing `permission-profile` input
+was excluded after checking the upstream action input definition. No paid API
+call or live GitHub review was run for this change; end-to-end verification
+remains pending publication on the default branch. Application code was not
+changed, and application builds/browser regressions were not rerun.
+
+The [Codex workflows](docs/codex-github-actions.md) separate API-based review from
+GitHub writes. The issue-analysis job reads an issue and source with a read-only
+token and sandbox; a separate publisher validates structured output and checks
+the issue revision before updating its own comment and two workflow-owned labels.
+All workflows using the repository's OpenAI key explicitly select `gpt-5.6-luna`.
+Ready analysis results dispatch implementation only when a maintainer has also
+applied `implementation-approved`. Both labels are required for manual starts
+and are rechecked before publication; analysis cannot grant approval.
+Implementation uses the tracked phase skills on a GitHub-hosted runner with a
+workspace-writing, network-enabled permission profile and an unprivileged user.
+The agent receives no GitHub write token. A fresh runner validates bounded text
+file output, reconstructs the changes, and runs Angular unit tests, both builds,
+and application Playwright tests. A separate publisher rechecks approval, issue readiness, requirement
+fingerprint, source revision, and verification digest before creating a branch
+and PR through the Git data API. PR merge remains a human action; `Closes #N`
+defers issue closure until merge. See the workflow documentation for supported
+paths, size limits, retries, and prerequisites. Source inspection and mocked
+helper tests do not establish a successful live implementation run.
+
+### Self-healing CI design (2026-11-12)
+
+The [CI repair workflow](.github/workflows/auto-fix.yml) watches failed
+`Repository Validation` runs through `workflow_run`. Its trusted controls come
+from the default-branch checkout; the exact failed revision is reconstructed
+separately in `source/`. Preparation authorizes the initiating maintainer and
+collects bounded log tails. Codex, independent verification, Git publication,
+and failure notification use separate jobs. Only the agent receives the OpenAI
+key; only the publisher can create code and PRs. The fixed model remains
+`gpt-5.6-luna`.
+
+The publisher requires a verified output digest and an unchanged target revision,
+creates one minimal `fix(ci)` commit on a new repair branch, and opens a PR to
+the failed branch. It explicitly dispatches secret-free validation, never merges,
+and never force-pushes. Unsupported or failed attempts create a deduplicated
+manual-intervention issue. Existing output size/path guards are reused, so
+dependency, workflow, and build/test configuration changes require human work.
+Repair branches, recognized repair commits, and reruns are excluded to bound
+automatic attempts. See the [workflow documentation](docs/codex-github-actions.md)
+for activation requirements, limits, and isolated-branch live-test instructions.
+
+This is a source-confirmed design, not evidence of a successful live repair.
+The workflow cannot activate until it is present on the default branch.
+Application code and dependencies are unchanged.
+
+Local verification on 2026-11-12 passed all 61 Node helper tests (24 new repair
+tests), Prettier for the new automation files and workflow documentation, and
+`git diff --check`. Actionlint 1.7.12 passed all six workflows with its known
+outdated-input warning for `permission-profile` excluded. Application builds and
+browser regressions were not rerun for this automation-only change. No paid
+repair request, repair PR, or failure notification has been exercised live yet.
+
+The subsequent isolated live test on 2026-11-12 supersedes that untested state:
+[test PR #15](https://github.com/jrubner/ki-software-engineer/pull/15) introduced
+one extra closing parenthesis, locally confirmed as TypeScript TS1005.
+[CI run 43185250566](https://github.com/jrubner/ki-software-engineer/actions/runs/43185250566)
+failed and automatically triggered
+[repair run 43185416779](https://github.com/jrubner/ki-software-engineer/actions/runs/43185416779).
+Preparation passed, but Codex failed to initialize its in-process app-server with
+`Permission denied`, before producing a repair. Independent verification and
+publication were skipped. Notification succeeded and created
+[issue #16](https://github.com/jrubner/ki-software-engineer/issues/16).
+No repair PR or successful end-to-end repair is verified.
+
+The custom Codex home was owned by `runner`, unlike the account executing Codex.
+The proposed correction assigns it to `codex-ci`, retains runner-group write
+access for action configuration, and checks ownership and write access as
+`codex-ci` before starting the action. This is a candidate correction pending
+a fresh Linux live test after merge, not a confirmed resolution. The existing
+issue-implementation workflow uses the same ownership pattern and was not changed
+as part of this CI-repair test.
 
 ### Refactoring verification (2026-11-09)
 
@@ -66,6 +163,29 @@ The structure groups the book feature under `books/` and reusable helpers under 
 - Formatting and final diff checks passed. No screenshot checks were performed, as requested. Firefox/WebKit and the historically blocked Karma setup were not run; this refactoring does not resolve the deferred list lifecycle risks.
 
 ## Runtime and data flow
+
+### Angular CLI MCP modernisation verification (2026-11-12)
+
+The user-authorised task 1569 used the installed Angular CLI MCP 20.2.0 server's
+actual `list_projects` and `get_best_practices` responses. Personal Codex MCP
+configuration was backed up and registered outside this repository. Its setup
+and the applied conventions are documented in [Angular CLI MCP with Codex](docs/angular-cli-mcp.md).
+No dependencies, application URLs, search timing, theme initialization, API
+contracts, or business behavior were intentionally changed. The existing list
+request/timer lifecycle limitations remain deferred.
+
+Development and production builds passed. Production output has a 360.67 kB
+initial bundle and separate lazy list/detail chunks. All six Angular unit tests
+and all 21 existing Chromium application tests passed. Two new list tests protect
+nondefault page size, asynchronous loading/empty rendering, 300 ms search timing,
+and immediate clearing. The running development server was verified by process
+command line and reused; no service restart was needed. Prettier passed for all
+changed application files and the new setup guide; `git diff --check` passed.
+Transient stale Vite
+overlays were cleared by recompiling unchanged/completed source before successful
+full reruns; see [REFACTORING.md](REFACTORING.md). These results supersede the
+historical eager-route/mutable-state description and four-test count for current
+application code while retaining the dated earlier evidence.
 
 ```text
 src/main.ts -> App + appConfig -> RouterOutlet -> BookListComponent
@@ -78,14 +198,14 @@ src/main.ts -> App + appConfig -> RouterOutlet -> BookListComponent
                                                    |
                                            Observable<Book[]>
                                                    |
-                                  component fields -> BookItemComponent[]
+                                  component signals -> BookItemComponent[]
 ```
 
 The following flow is supported by [BookListComponent](src/app/books/book-list.component.ts), [BookApiClient](src/app/books/book-api-client.service.ts), and [BookItemComponent](src/app/books/book-item.component.ts):
 
 1. `BookListComponent.ngOnInit()` loads books with its `pageSize` input, which defaults to 10.
 2. `BookApiClient.getBooks()` sends `GET http://localhost:4730/books` with `_limit`. When a search term is present, it also sends `q`. The API implementation and its exact search semantics are outside this repository. A local title search was observed to work; the service comment about searching title and author is not proof of the full server-side search contract.
-3. The component subscribes directly, stores the response in `books`, and clears `loading`. Each book is passed to a presentation component; `trackById` uses its `id`.
+3. The component subscribes directly, updates the `books` and `loading` signals, and renders with `OnPush`. Each book is passed to a presentation component with a required signal input; `@for` tracks its `id`.
 4. Search uses `FormsModule` and two-way `ngModel` binding. Changes reset a 300 ms timeout before requesting results. Clearing the search immediately reloads the default list.
 5. While loading, the UI shows a spinner. An empty array produces an empty state. Request errors are logged to the console and clear `loading`; there is no dedicated error message or retry control.
 
@@ -280,3 +400,28 @@ Before future AI-assisted reviews, confirm the approved service and repository s
 - All 51 distinct Chromium cases passed across the combined run and two targeted reruns: 22 game scenarios, five engine cases, and 24 book-detail/theme/shell regressions. Five added scenarios cover sequential pending-reel focus and actual slower rolling, no anticipation when the second scatter lands on the final reel, immediate celebration at the third scatter, synchronized forward/backward icon motion and highlighting before the dialog, autospin locking through celebration, and navigation cleanup.
 - The combined run passed 49 cases. A final rotation-direction adjustment during that run caused HMR to reset the long free-spin scenario and left the running worker with its previous keyframe assertion. Both affected cases passed when rerun against the unchanged final code, including retriggering and exhausting the free spins. Game assertions allow the intentionally extended anticipation and celebration sequence.
 - Formatting and whitespace checks passed. The existing local development server was reused; the VS Code Debug MCP still reported the unrelated `ivoris` workspace. No services, browser configuration, dependencies, or payout rules were changed. No screenshots were taken; Firefox/WebKit and Karma were not run.
+
+### Workshop remediation checks (2026-11-11)
+
+The explicitly authorized unit-test repair adds the missing Karma/Jasmine development
+packages for the existing Angular 20 builder and four HTTP contract tests in
+`src/app/books/book-api-client.service.spec.ts`. Headless Chrome passed all four;
+a temporarily incorrect expected page size produced the expected failing assertion
+and was restored. This supersedes the historical missing-runner finding below
+without changing its dated evidence. Automation guards passed 37 tests, and the
+existing browser suite passed 21 cases. Development and production builds passed.
+
+`repository-validation.yml` adds deterministic, secret-free PR validation. The
+implementation verifier also runs unit tests. Both preparation and publication
+require the maintainer-controlled `implementation-approved` label in addition to
+readiness; analysis cannot authorize implementation. Workflows pin verified action
+commits and Ubuntu 24.04. These changes remain pending until their new PR is merged.
+
+GitHub validation passed for PR #11 in run `43086376012`. Live testing of the
+previously merged workflows exposed two infrastructure failures: PR review
+generated a report but its publisher received HTTP 403 with issue write / PR read
+permissions (run `43086372112`); issue #12 implementation stopped before Codex
+because Playwright 1.55 cannot install Chromium on the Ubuntu 26.04 runner selected
+by `ubuntu-latest` (run `43087080538`). PR #11 corrects the publisher scope and pins
+Ubuntu 24.04. Neither end-to-end publishing nor automatic implementation is
+verified until those corrections reach `main` and the live runs succeed.

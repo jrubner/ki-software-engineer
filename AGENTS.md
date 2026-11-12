@@ -6,9 +6,15 @@
 - Inspect Git status and the affected diff before editing. Preserve existing work and avoid unrelated formatting, dependency changes, and refactors.
 - Communicate with the user in German. Write new repository documentation, identifiers, comments, and UI text in English, following existing conventions.
 - Follow the more specific instructions under `src/` and the book feature without duplicating their rules here.
-- Keep personal skills, credentials, machine-specific paths, browser profiles, and MCP configuration out of the repository. Respect the user's current service/browser instructions.
+- Track the five phase skills, the `j-feature-delivery` orchestration skill, and
+  their existing `context-recovery` helper under `.agents/skills/`. Keep other
+  personal skills, credentials, machine-specific
+  paths, browser profiles, and MCP configuration out of the repository. Respect the
+  user's current service/browser instructions.
 
 ## Task branches and pull requests
+
+- Use `gpt-5.6-luna` explicitly for every API call authenticated with this repository's `OPENAI_API_KEY`. Do not rely on a default model or fall back to another model.
 
 - Use a separate branch for each task. Before editing, create a descriptive task branch from `main`, or continue on the existing branch dedicated to that task. Do not implement tasks directly on `main`; preserve unrelated uncommitted work.
 - Complete the requested changes and applicable verification, then ask the user whether the task should be merged into `main` through a GitHub pull request. Include a brief summary of the changes and actual verification results so the decision is reviewable.

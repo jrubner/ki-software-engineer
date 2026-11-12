@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
-import { BookListComponent } from './books/book-list.component';
-import { BookDetailComponent } from './books/book-detail.component';
 
 export const routes: Routes = [
-  { path: '', component: BookListComponent },
-  { path: 'books/:isbn', component: BookDetailComponent },
+  { path: '', loadComponent: () => import('./books/book-list.component').then(module => module.BookListComponent) },
+  {
+    path: 'books/:isbn',
+    loadComponent: () => import('./books/book-detail.component').then(module => module.BookDetailComponent)
+  },
   {
     path: 'gamba',
     loadComponent: () => import('./gamba/gamba.component').then(module => module.GambaComponent),

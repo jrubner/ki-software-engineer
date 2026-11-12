@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "label": {
+      "type": "string",
+      "enum": ["ready-for-implementation", "needs-clarification"]
+    },
+    "report": { "type": "string" }
+  },
+  "required": ["label", "report"]
+}

@@ -1,5 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Book } from './book';
 import { BookApiClient } from './book-api-client.service';
@@ -7,51 +6,46 @@ import { BookItemComponent } from './book-item.component';
 
 @Component({
   selector: 'app-book-list',
-  standalone: true,
-  imports: [CommonModule, FormsModule, BookItemComponent],
+  imports: [FormsModule, BookItemComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-list.component.html'
 })
 export class BookListComponent implements OnInit {
-  @Input() pageSize: number = 10;
-  books: Book[] = [];
-  loading: boolean = true;
-  searchTerm: string = '';
-  searchTimeout: any;
-
-  constructor(private bookApiClient: BookApiClient) {}
+  readonly pageSize = input(10);
+  protected readonly books = signal<Book[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly searchTerm = signal('');
+  private readonly bookApiClient = inject(BookApiClient);
+  private searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
   ngOnInit(): void {
     this.loadBooks();
   }
 
   private loadBooks(search?: string): void {
-    this.loading = true;
-    this.bookApiClient.getBooks(this.pageSize, search).subscribe({
+    this.loading.set(true);
+    this.bookApiClient.getBooks(this.pageSize(), search).subscribe({
       next: books => {
-        this.books = books;
-        this.loading = false;
+        this.books.set(books);
+        this.loading.set(false);
       },
-      error: error => {
+      error: (error: unknown) => {
         console.error('Error fetching books:', error);
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
 
-  onSearchChange(): void {
+  protected onSearchChange(): void {
     // Debounce search to avoid too many API calls while typing
     clearTimeout(this.searchTimeout);
     this.searchTimeout = setTimeout(() => {
-      this.loadBooks(this.searchTerm);
+      this.loadBooks(this.searchTerm());
     }, 300);
   }
 
-  clearSearch(): void {
-    this.searchTerm = '';
+  protected clearSearch(): void {
+    this.searchTerm.set('');
     this.loadBooks();
-  }
-
-  trackById(index: number, book: Book): string {
-    return book.id;
   }
 }

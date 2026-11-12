@@ -44,3 +44,92 @@ Following the user's explicit request to execute the task steps in order, the wo
 5. **Review resulting changes:** inspected bindings, state handling, routing, and relevant test assertions. The previously executed development/production builds and 13 passing Chromium cases apply to this unchanged application code; they were not rerun for this documentation-only acceptance review.
 
 All three technical workshop success criteria are satisfied. This records an agent review of the resulting changes; it does not claim that the participant has personally reviewed them or that the classroom page has been marked complete.
+
+## Angular CLI MCP modernisation (2026-11-12)
+
+The user authorised implementation of workshop task 1569 using Codex instead of
+Cursor. The clean starting revision is `f41c449`. The installed Angular CLI MCP
+server (20.2.0) successfully answered `initialize`, `tools/list`, `list_projects`,
+and `get_best_practices`. Its guidance is applied to the existing Angular 20 app;
+no framework upgrade, dependency migration, or product redesign is required.
+
+| Source-confirmed finding | Target and scope | Verification |
+| --- | --- | --- |
+| List, detail, and card templates use structural directives and broad `CommonModule` imports. | Use built-in control flow, preserve DOM elements and track books by `id`, and import only required pipes/directives. | Existing detail, keyboard, empty/loading, shell, and theme browser cases; both builds. |
+| List/card inputs use decorators; list rendering depends on mutable fields and default change detection. | Use signal inputs, signal-backed local state, and `OnPush` for all components; preserve page-size defaults, request timing, and view states. | HTTP unit contracts and application browser suite, including asynchronous detail/cover updates. |
+| Services and book components use constructor parameter injection. | Prefer `inject()` while retaining the existing detail Observable composition and lifecycle ownership. | HTTP unit tests and route/error recovery browser cases. |
+| Both feature routes are imported eagerly. | Load standalone list/detail components lazily without changing URLs or route order. | Direct URL, reload, wildcard, back, and parameter-change browser cases; production chunk output. |
+| Redundant `standalone: true`, explicit inferable types, one `any` timer, and a stale card comment obscure current conventions. | Remove redundant declarations/comment and type the existing timer; preserve the separately deferred search lifecycle behavior. | Strict compilation, formatting, and final diff review. |
+
+Already compliant: standalone architecture, strict checking, host bindings,
+root-provided services, signal-based theme state, listener cleanup, escaped book
+descriptions, and request-local detail errors. These remain intact. Book covers
+are dynamic API URLs rather than static image assets; retain their existing
+fallback behavior. The single search field keeps template-driven binding; a
+reactive form abstraction would not improve this behavior-preserving migration.
+Zoneless change detection and the previously deferred search cancellation/timer
+cleanup are not part of this change.
+
+Personal MCP configuration is backed up and configured outside the repository;
+machine paths and MCP configuration are not committed. Codex needs to reload the
+configuration before the new tools appear in its session; direct stdio MCP calls
+provided the guidance used for this implementation.
+
+All five findings above are implemented. Verification:
+
+- The initial browser baseline had 20 passing cases and one click blocked by a
+  stale Vite TS1005 overlay from the earlier intentional CI failure; source already
+  contained the correct line. Recompiling that unchanged file produced a clean
+  baseline: 21 Chromium cases and four Angular HTTP unit cases passed.
+- `node node_modules/@angular/cli/bin/ng.js build --configuration development`
+  and `npm.cmd run build` passed after implementation. The production initial
+  bundle is 360.67 kB; separate list and detail chunks confirm lazy loading.
+- `node node_modules/@angular/cli/bin/ng.js test --watch=false --browsers=ChromeHeadless`
+  passed all six cases, including two new list contracts covering a nondefault
+  page size, asynchronous empty/loading rendering, the 300 ms search delay, and
+  immediate clear. The test waits for Angular's asynchronous `ngModel` update;
+  production behavior and assertions were preserved.
+- `node node_modules/@playwright/test/cli.js test tests/book-detail.spec.ts tests/theme.spec.ts tests/shell.spec.ts --project=chromium --workers=1 --reporter=line`
+  passed all 21 existing cases. A transient HMR overlay from the intermediate
+  migration blocked the first attempt; recompiling the completed detail component
+  cleared it before the successful full rerun.
+- The existing development server was attributed to this repository by its
+  process command line and reused. VS Code Debug MCP was connected to a different
+  workspace (`ivoris`); it was not used to control this project's services.
+  No application service was started, stopped, or restarted.
+- `codex mcp get angular-cli` recognised the enabled stdio configuration, command,
+  arguments, and workspace. Session-native tool discovery still needs a reload;
+  actual MCP calls were tested directly. No API key or paid API request is needed
+  for these local Angular MCP tools.
+- Formatting and whitespace checks are recorded in the architecture update.
+  No visible UI redesign or screenshot change is included. Firefox/WebKit were
+  not run. Existing search lifecycle risks remain deferred as described above.
+
+### MCP follow-up review (2026-11-12)
+
+Repeated direct stdio MCP calls to `get_best_practices` and `list_projects`
+succeeded. `search_documentation` also succeeded with network access after the
+sandboxed request reported unreachable hosts, returning the official Angular
+signals documentation. These tools supply guidance and project context; the
+code review below compares that guidance with the actual diff.
+
+The implementation follows the applicable recommendations for signal inputs,
+local signal state, `OnPush`, built-in control flow, `inject()`, lazy feature
+routes, strict typing, and standalone defaults. No new correctness regression
+was identified in the reviewed changes. Remaining findings are pre-existing:
+
+- **P2: Search request ordering.** `BookListComponent.loadBooks()` subscribes to
+  each request independently. An older response can overwrite results for a
+  newer query because there is no cancellation or response ordering guard.
+- **P2: Search lifecycle cleanup.** `onSearchChange()` schedules a timer without
+  destruction cleanup, and `clearSearch()` does not cancel a pending timer.
+  Requests also lack destruction-bound cleanup. This permits redundant work
+  after clearing the field or leaving the list. These mechanisms are confirmed
+  by source inspection; their failure scenarios were not newly exercised.
+- **P3: Intentional guidance exception.** The search template retains `ngModel`,
+  whereas the MCP recommends preferring Reactive Forms. This is a documented
+  choice for the existing single-field search, not a newly observed defect.
+
+No application code changed during this follow-up review. The six unit tests,
+21 Chromium cases, and both builds recorded above cover this same source state
+and were not rerun for a documentation-only review update.

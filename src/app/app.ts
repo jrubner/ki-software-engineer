@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { ThemeService } from './shared/theme.service';
 import { AutoHideHeaderDirective } from './shared/auto-hide-header.directive';
@@ -6,10 +6,11 @@ import { AutoHideHeaderDirective } from './shared/auto-hide-header.directive';
 @Component({
   selector: 'app-root',
   imports: [RouterLink, RouterOutlet, AutoHideHeaderDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class App {
-  protected title = 'BookMonkey';
+  protected readonly title = 'BookMonkey';
   protected readonly theme = inject(ThemeService);
 }
