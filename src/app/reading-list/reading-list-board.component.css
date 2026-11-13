@@ -1,0 +1,157 @@
+.board-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+.reading-board {
+  display: grid;
+  align-items: start;
+  gap: 1.25rem;
+}
+.reading-column {
+  --column-color: var(--color-muted);
+  min-width: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 1.5rem;
+  background: var(--color-surface);
+}
+.reading-column[data-status='currently-reading'] {
+  --column-color: var(--color-accent);
+}
+.reading-column[data-status='read'] {
+  --column-color: var(--color-ink);
+}
+.column-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1.5rem 1.25rem;
+}
+.column-dot {
+  height: 0.5rem;
+  width: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--column-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--column-color) 10%, transparent);
+}
+.column-count {
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--color-surface-soft);
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+.column-number {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  opacity: 0.6;
+}
+.book-dropzone {
+  min-height: 24rem;
+  margin: 0 0.625rem 0.625rem;
+  padding: 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 1rem;
+  background: var(--color-surface-soft);
+}
+.reading-card {
+  display: flex;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 1.125rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.875rem;
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+  cursor: grab;
+  overflow-wrap: anywhere;
+}
+.reading-card:last-child {
+  margin-bottom: 0;
+}
+.reading-card:hover {
+  border-color: var(--color-accent);
+}
+.reading-card:active {
+  cursor: grabbing;
+}
+.book-cover {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 5.25rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 0.25rem 0.5rem 0.5rem 0.25rem;
+  background: linear-gradient(120deg, var(--color-accent-soft), var(--color-surface-soft));
+  border-left: 3px solid var(--color-accent);
+}
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.cover-letter {
+  font-family: Georgia, serif;
+  font-size: 2rem;
+  color: var(--color-accent);
+}
+.card-author {
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+.card-title:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.empty-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 17rem;
+  padding: 1.5rem;
+  border: 1px dashed var(--color-line);
+  border-radius: 0.75rem;
+  text-align: center;
+  color: var(--color-muted);
+}
+.cdk-drop-list-receiving {
+  border-color: var(--color-accent);
+}
+.book-dropzone:has(.cdk-drag-placeholder) .empty-column {
+  display: none;
+}
+.cdk-drag-preview {
+  cursor: grabbing;
+  border-color: var(--color-accent);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 20%);
+}
+.cdk-drag-placeholder {
+  opacity: 0.2;
+  border-style: dashed;
+}
+.cdk-drag-animating,
+.cdk-drop-list-dragging .reading-card:not(.cdk-drag-placeholder) {
+  transition: transform 180ms ease;
+}
+@media (min-width: 1024px) {
+  .reading-board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cdk-drag-animating,
+  .cdk-drop-list-dragging .reading-card {
+    transition: none;
+  }
+}

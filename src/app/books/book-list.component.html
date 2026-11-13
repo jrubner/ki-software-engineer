@@ -5,6 +5,7 @@
     <p class="mt-4 max-w-xl text-base leading-relaxed text-muted">
       Find your next perspective. Explore the collection, follow your curiosity, and take a closer look.
     </p>
+    <a routerLink="/books/new" class="button-primary mt-6 inline-flex">Add book</a>
   </div>
 
   <div class="mb-8 sm:mb-10">
@@ -50,7 +51,15 @@
     </div>
   }
 
-  @if (!loading()) {
+  @if (!loading() && error()) {
+    <div role="alert" class="status-panel">
+      <p class="text-xl font-semibold text-ink mb-2">Could not load books</p>
+      <p class="text-muted">Please try again.</p>
+      <button type="button" (click)="retry()" class="button-primary mt-6">Try again</button>
+    </div>
+  }
+
+  @if (!loading() && !error()) {
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       @for (book of books(); track book.id) {
         <app-book-item [book]="book"></app-book-item>
@@ -86,4 +95,27 @@
       }
     </div>
   }
+
+  <nav aria-label="Book collection pages" class="mt-8 flex flex-wrap items-center justify-between gap-4">
+    <p class="text-sm text-muted" aria-live="polite">{{ totalCount() }} {{ totalCount() === 1 ? 'book' : 'books' }}</p>
+    <div class="flex items-center gap-4">
+      <button
+        type="button"
+        (click)="goToPage(page() - 1)"
+        [disabled]="loading() || page() <= 1"
+        class="rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink transition hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Previous
+      </button>
+      <p aria-live="polite" class="text-sm font-medium text-ink">Page {{ page() }} of {{ totalPages }}</p>
+      <button
+        type="button"
+        (click)="goToPage(page() + 1)"
+        [disabled]="loading() || page() >= totalPages"
+        class="rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink transition hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Next
+      </button>
+    </div>
+  </nav>
 </div>

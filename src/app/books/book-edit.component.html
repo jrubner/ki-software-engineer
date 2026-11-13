@@ -1,0 +1,128 @@
+<div class="page-shell max-w-4xl">
+  @if (!saving()) {
+    <a routerLink="/" class="text-link inline-flex mb-8">Back to book collection</a>
+  }
+  @let current = state();
+  @if (current.status === 'loading') {
+    <p role="status" class="status-panel text-muted">Loading book...</p>
+  }
+  @if (current.status === 'not-found') {
+    <section role="status" class="status-panel">
+      <h1 class="text-2xl font-bold text-ink mb-3">Book not found</h1>
+      <p class="text-muted">We could not find a book with this ISBN.</p>
+    </section>
+  }
+  @if (current.status === 'error') {
+    <section role="alert" class="status-panel border-danger-line bg-danger-soft">
+      <h1 class="text-2xl font-bold text-danger mb-3">Unable to load book</h1>
+      <p class="text-muted">Please check your connection and try again later.</p>
+    </section>
+  }
+  @if (current.book; as book) {
+    <section class="surface-panel p-5 sm:p-8">
+      <p class="eyebrow mb-3">Update your collection</p>
+      <h1 class="text-3xl font-bold tracking-tight text-ink mb-3">Edit book</h1>
+      <p class="text-muted mb-8 break-words">ISBN: {{ book.isbn }}</p>
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate [attr.aria-busy]="saving()">
+        <fieldset [disabled]="saving()" class="grid min-w-0 gap-6 sm:grid-cols-2">
+          <legend class="sr-only">Book details</legend>
+          <div class="book-field">
+            <label for="edit-title">Title</label>
+            <input
+              id="edit-title"
+              formControlName="title"
+              required
+              [attr.aria-invalid]="form.controls.title.touched && form.controls.title.invalid"
+              aria-describedby="title-error"
+            />
+            <div id="title-error">
+              @if (form.controls.title.touched && form.controls.title.invalid) {
+                <p class="text-sm text-danger">Enter a title.</p>
+              }
+            </div>
+          </div>
+          <div class="book-field">
+            <label for="edit-subtitle">Subtitle</label>
+            <input id="edit-subtitle" formControlName="subtitle" />
+          </div>
+          <div class="book-field">
+            <label for="edit-author">Author</label>
+            <input
+              id="edit-author"
+              formControlName="author"
+              required
+              [attr.aria-invalid]="form.controls.author.touched && form.controls.author.invalid"
+              aria-describedby="author-error"
+            />
+            <div id="author-error">
+              @if (form.controls.author.touched && form.controls.author.invalid) {
+                <p class="text-sm text-danger">Enter an author.</p>
+              }
+            </div>
+          </div>
+          <div class="book-field">
+            <label for="edit-publisher">Publisher</label>
+            <input id="edit-publisher" formControlName="publisher" />
+          </div>
+          <div class="book-field">
+            <label for="edit-pages">Pages</label>
+            <input
+              id="edit-pages"
+              type="number"
+              min="1"
+              step="1"
+              formControlName="numPages"
+              required
+              [attr.aria-invalid]="form.controls.numPages.touched && form.controls.numPages.invalid"
+              aria-describedby="pages-error"
+            />
+            <div id="pages-error">
+              @if (form.controls.numPages.touched && form.controls.numPages.invalid) {
+                <p class="text-sm text-danger">Enter a positive whole number of pages.</p>
+              }
+            </div>
+          </div>
+          <div class="book-field">
+            <label for="edit-price">Price</label>
+            <input id="edit-price" formControlName="price" />
+          </div>
+          <div class="book-field sm:col-span-2">
+            <label for="edit-cover">Cover URL</label>
+            <input id="edit-cover" formControlName="cover" />
+          </div>
+          <div class="book-field sm:col-span-2">
+            <label for="edit-description">Description</label>
+            <textarea id="edit-description" formControlName="abstract" rows="5"></textarea>
+          </div>
+          <div class="book-field">
+            <label for="edit-date">Publication date</label>
+            <input id="edit-date" formControlName="publishedAt" placeholder="YYYY-MM-DD" />
+          </div>
+          <div class="book-field">
+            <label for="edit-coauthors">Co-authors</label>
+            <textarea
+              id="edit-coauthors"
+              formControlName="coAuthors"
+              rows="3"
+              aria-describedby="coauthors-help"
+            ></textarea>
+            <p id="coauthors-help" class="text-sm font-normal text-muted">One name per line.</p>
+          </div>
+          @if (saveError()) {
+            <p role="alert" class="sm:col-span-2 rounded-xl border border-danger-line bg-danger-soft p-4 text-danger">
+              Unable to save changes. Your inputs have been kept. Please try again.
+            </p>
+          }
+          <div class="sm:col-span-2 flex flex-wrap items-center gap-5">
+            <button type="submit" class="button-primary" [disabled]="saving()">
+              {{ saving() ? 'Saving changes...' : 'Save changes' }}
+            </button>
+            <button type="button" class="text-link min-h-11 px-3" (click)="cancel()" [disabled]="saving()">
+              Cancel
+            </button>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+  }
+</div>

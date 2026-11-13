@@ -1,0 +1,130 @@
+<div class="page-shell max-w-4xl">
+  @if (!saving()) {
+    <a routerLink="/" class="text-link inline-flex mb-8">Back to book collection</a>
+  }
+  <section class="surface-panel p-5 sm:p-8">
+    <p class="eyebrow mb-3">Grow your collection</p>
+    <h1 class="text-3xl font-bold tracking-tight text-ink mb-8">Add a book</h1>
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate [attr.aria-busy]="saving()">
+      <fieldset [disabled]="saving()" class="grid min-w-0 gap-6 sm:grid-cols-2">
+        <legend class="sr-only">Book details</legend>
+        <div class="book-field">
+          <label for="create-isbn">ISBN</label>
+          <input
+            id="create-isbn"
+            formControlName="isbn"
+            required
+            [attr.aria-invalid]="(form.controls.isbn.touched && form.controls.isbn.invalid) || duplicateIsbn()"
+            aria-describedby="isbn-error"
+          />
+          <div id="isbn-error" [attr.role]="duplicateIsbn() ? 'alert' : null">
+            @if (form.controls.isbn.touched && form.controls.isbn.invalid) {
+              <p class="text-sm text-danger">Enter an ISBN.</p>
+            }
+            @if (duplicateIsbn()) {
+              <p class="text-sm text-danger">A book with this ISBN already exists. Enter a different ISBN.</p>
+            }
+          </div>
+        </div>
+        <div class="book-field">
+          <label for="create-title">Title</label>
+          <input
+            id="create-title"
+            formControlName="title"
+            required
+            [attr.aria-invalid]="form.controls.title.touched && form.controls.title.invalid"
+            aria-describedby="title-error"
+          />
+          <div id="title-error">
+            @if (form.controls.title.touched && form.controls.title.invalid) {
+              <p class="text-sm text-danger">Enter a title.</p>
+            }
+          </div>
+        </div>
+        <div class="book-field">
+          <label for="create-subtitle">Subtitle</label>
+          <input id="create-subtitle" formControlName="subtitle" />
+        </div>
+        <div class="book-field">
+          <label for="create-author">Author</label>
+          <input
+            id="create-author"
+            formControlName="author"
+            required
+            [attr.aria-invalid]="form.controls.author.touched && form.controls.author.invalid"
+            aria-describedby="author-error"
+          />
+          <div id="author-error">
+            @if (form.controls.author.touched && form.controls.author.invalid) {
+              <p class="text-sm text-danger">Enter an author.</p>
+            }
+          </div>
+        </div>
+        <div class="book-field">
+          <label for="create-publisher">Publisher</label>
+          <input id="create-publisher" formControlName="publisher" />
+        </div>
+        <div class="book-field">
+          <label for="create-pages">Pages</label>
+          <input
+            id="create-pages"
+            type="number"
+            min="1"
+            step="1"
+            formControlName="numPages"
+            required
+            [attr.aria-invalid]="form.controls.numPages.touched && form.controls.numPages.invalid"
+            aria-describedby="pages-error"
+          />
+          <div id="pages-error">
+            @if (form.controls.numPages.touched && form.controls.numPages.invalid) {
+              <p class="text-sm text-danger">Enter a positive whole number of pages.</p>
+            }
+          </div>
+        </div>
+        <div class="book-field">
+          <label for="create-price">Price</label>
+          <input id="create-price" formControlName="price" />
+        </div>
+        <div class="book-field sm:col-span-2">
+          <label for="create-cover">Cover URL</label>
+          <input id="create-cover" formControlName="cover" />
+        </div>
+        <div class="book-field sm:col-span-2">
+          <label for="create-description">Description</label>
+          <textarea id="create-description" formControlName="abstract" rows="5"></textarea>
+        </div>
+        <div class="book-field">
+          <label for="create-date">Publication date</label>
+          <input id="create-date" formControlName="publishedAt" placeholder="YYYY-MM-DD" />
+        </div>
+        <div class="book-field">
+          <label for="create-coauthors">Co-authors</label>
+          <textarea
+            id="create-coauthors"
+            formControlName="coAuthors"
+            rows="3"
+            aria-describedby="coauthors-help"
+          ></textarea>
+          <p id="coauthors-help" class="text-sm font-normal text-muted">One name per line.</p>
+        </div>
+        @if (lookupError()) {
+          <p role="alert" class="sm:col-span-2 rounded-xl border border-danger-line bg-danger-soft p-4 text-danger">
+            Unable to check this ISBN. Your inputs have been kept. Please try again.
+          </p>
+        }
+        @if (saveError()) {
+          <p role="alert" class="sm:col-span-2 rounded-xl border border-danger-line bg-danger-soft p-4 text-danger">
+            Unable to save this book. Your inputs have been kept. Please try again.
+          </p>
+        }
+        <div class="sm:col-span-2 flex flex-wrap items-center gap-5">
+          <button type="submit" class="button-primary" [disabled]="saving()">
+            {{ saving() ? 'Saving book...' : 'Add book' }}
+          </button>
+          <button type="button" class="text-link min-h-11 px-3" (click)="cancel()" [disabled]="saving()">Cancel</button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+</div>

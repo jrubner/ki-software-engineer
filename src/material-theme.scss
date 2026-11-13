@@ -1,6 +1,18 @@
 @use '@angular/material' as mat;
 
 :root {
+  @include mat.tooltip-overrides(
+    (
+      container-color: var(--color-ink),
+      container-shape: 8px,
+      supporting-text-color: var(--color-surface),
+      supporting-text-font: inherit,
+      supporting-text-size: 12px,
+      supporting-text-line-height: 18px,
+      supporting-text-weight: 500
+    )
+  );
+
   @include mat.snack-bar-overrides(
     (
       container-color: var(--color-ink),
