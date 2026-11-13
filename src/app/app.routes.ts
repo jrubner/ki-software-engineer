@@ -7,6 +7,14 @@ export const routes: Routes = [
     loadComponent: () => import('./books/book-create.component').then(module => module.BookCreateComponent)
   },
   {
+    path: 'editorial-recommendations',
+    loadComponent: () =>
+      import('./books/editorial-recommendations-page.component').then(
+        module => module.EditorialRecommendationsPageComponent
+      ),
+    title: 'Editorial recommendations | BookMonkey'
+  },
+  {
     path: 'reading-list',
     loadComponent: () =>
       import('./reading-list/reading-list-board.component').then(module => module.ReadingListBoardComponent)

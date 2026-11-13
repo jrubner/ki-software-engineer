@@ -12,6 +12,8 @@ export interface Book {
   userId: number;
   publishedAt?: string;
   coAuthors?: string[];
+  editorialRecommendation?: boolean;
+  editorialRecommendationOrder?: number;
 }
 
 export type NewBook = Omit<Book, 'id'>;

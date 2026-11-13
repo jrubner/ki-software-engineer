@@ -13,7 +13,7 @@ The review followed the bootstrap and provider configuration, routes, component 
 
 ## Purpose and scope
 
-BookMonkey is an Angular workshop application with a searchable, paginated book collection, individual details, and forms for creating and editing books. The repository contains the browser frontend; the fake Bookmonkey API is started separately. A personal reading-list board persists locally in the browser; authentication is not implemented. The selected color theme is also stored locally. The additional `/gamba` route hosts Book of CK, a client-only slot game using fictional credits; it has no payments or backend persistence.
+BookMonkey is an Angular workshop application with a searchable, paginated book collection, individual details, and forms for creating and editing books. The repository contains the browser frontend; the fake Bookmonkey API is started separately. Shared editorial recommendations persist as optional fields on books in that API. A personal reading-list board persists locally in the browser; authentication is not implemented. The selected color theme is also stored locally. The additional `/gamba` route hosts Book of CK, a client-only slot game using fictional credits; it has no payments or backend persistence.
 
 ## Technology and dependencies
 
@@ -215,6 +215,26 @@ The following flow is supported by [BookListComponent](src/app/books/book-list.c
 5. Previous/Next controls disable at boundaries and while loading. Errors offer retry of the same page/query. A response that makes the current page invalid triggers a corrected request for the last valid page. Zero totals render the empty state.
 
 The [Book interface](src/app/books/book.ts) includes `id`, `isbn`, `title`, optional `subtitle`, `author`, `publisher`, `numPages`, `price`, `cover`, `abstract`, and `userId`. It also models optional `publishedAt?: string` and `coAuthors?: string[]`, based on the locally served API documentation. The HTTP generic expresses a compile-time expectation; no runtime response validation is implemented. A sample response alone does not establish field types or guarantees for all responses.
+
+### Editorial recommendations
+
+[BookRecommendationsComponent](src/app/books/book-recommendations.component.ts) renders below successful book details with the requested heading `Empfehlungen der Redaktion`, without a portrait. A shared selection contains up to four books; the current ISBN is excluded from display, so a selected book's own page shows at most three. Each card is a single accessible ISBN router link with cover, author and title. The grid uses four desktop columns and two mobile columns, with existing theme tokens and a missing/broken-cover placeholder.
+
+[EditorialRecommendationsPageComponent](src/app/books/editorial-recommendations-page.component.ts) provides the independent, lazy-loaded `/editorial-recommendations` overview. Main navigation links to it as Recommendations, and detail sections link to it as Manage recommendations. The overview renders the shared selection without excluding an ISBN and has its own page heading and document title. Add books opens the selection dialog within this route.
+
+[EditorialSelectionDialogComponent](src/app/books/editorial-selection-dialog.component.ts) uses CDK Dialog with focus trapping/restoration, Escape cancellation, and a typed Signal Forms search. Cancellable searches use existing `BookApiClient.getBooksPage()` requests, eight results per page and a 300 ms input delay. Selection order follows the order in which books are added. Selection stays in the dialog until Save; removing all books clears the shared recommendations. Closing the dialog returns to the overview and reloads its saved selection.
+
+[EditorialRecommendationsService](src/app/books/editorial-recommendations.service.ts) reads `GET /books?editorialRecommendation_like=^true$`, filters strict boolean values and sorts by optional `editorialRecommendationOrder`. The regex query also excludes records without the new field in the installed json-server API. Saving first reloads the current selection, then sequentially patches removals and additions using encoded ISBNs. PATCH bodies contain only `editorialRecommendation` and `editorialRecommendationOrder`; bibliographic data is preserved. No backend source, dependency or separate service was added. Existing edit forms spread the loaded book when saving, preserving these fields.
+
+The existing API has no editorial authorization or multi-record transaction. Concurrent editors can overwrite or combine selections; the display remains capped at four. A failed save can leave partial updates. The dialog reports this, retains the draft for retry, and reloads saved state on cancellation. These limits require a different backend contract to eliminate.
+
+#### Verification (2026-11-13)
+
+- All 106 Angular unit tests passed, including HTTP field isolation, encoded ISBN addressing, order, and retry after partial writes.
+- All 30 Chromium Playwright cases passed across book details, recommendations, theme and shell. Six recommendation cases cover the independent overview route and navigation, reload without detail requests, selection/search/paging, limits, persistence, cancellation/focus, error recovery and mobile dark mode. Existing list mocks now expose pagination totals; shell assertions account for the existing Add book link and use a not-found page for the short-page footer assertion.
+- Development and production builds passed. Production retains the unrelated game CSS budget warning (7.78 kB against a 4 kB warning threshold).
+- The existing Chrome session and real Bookmonkey API verified four selected books, loaded covers, preserved bibliographic fields, detail navigation, reload persistence and exclusion of the current ISBN. The temporary selection was cleared afterward. The independent overview route, its heading/navigation and its Add books dialog were subsequently checked in the same browser session. Desktop viewport measured 1383 × 924; automated mobile checks used 390 × 844. No screenshots were retained.
+- The previous development server served stale bundles and did not respond to file changes. With no VS Code Debug MCP available, its verified repository-specific process was restarted using a shell fallback. The backend was reused unchanged. Firefox/WebKit and production hosting were not verified.
 
 ### Book details
 
