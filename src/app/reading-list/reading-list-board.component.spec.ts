@@ -1,7 +1,8 @@
+import type { MockedObject } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { BookApiClient } from '../books/book-api-client.service';
 import { Book } from '../books/book';
 import { provideRouter } from '@angular/router';
@@ -11,7 +12,7 @@ import { ReadingListEntry } from './reading-list.types';
 
 describe('ReadingListBoardComponent', () => {
   let fixture: ComponentFixture<ReadingListBoardComponent>;
-  let api: jasmine.SpyObj<BookApiClient>;
+  let api: MockedObject<Pick<BookApiClient, 'getBookByIsbn'>>;
   let store: ReadingListStore;
 
   const book = (isbn: string, id = `api-${isbn}`): Book => ({
@@ -29,8 +30,10 @@ describe('ReadingListBoardComponent', () => {
 
   beforeEach(async () => {
     localStorage.clear();
-    api = jasmine.createSpyObj<BookApiClient>('BookApiClient', ['getBookByIsbn']);
-    api.getBookByIsbn.and.callFake(isbn => of(book(isbn)));
+    api = {
+      getBookByIsbn: vi.fn().mockName('BookApiClient.getBookByIsbn')
+    };
+    api.getBookByIsbn.mockImplementation(isbn => of(book(isbn)));
     await TestBed.configureTestingModule({
       imports: [ReadingListBoardComponent],
       providers: [provideRouter([]), { provide: BookApiClient, useValue: api }]
@@ -45,7 +48,8 @@ describe('ReadingListBoardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Want to read');
     expect(fixture.nativeElement.textContent).toContain('Currently reading');
     expect(fixture.nativeElement.textContent).toContain('Read');
-    expect(api.getBookByIsbn).toHaveBeenCalledOnceWith('978-1');
+    expect(api.getBookByIsbn).toHaveBeenCalledTimes(1);
+    expect(api.getBookByIsbn).toHaveBeenCalledWith('978-1');
   });
 
   it('makes the entire card draggable without status controls or a separate handle', () => {
@@ -56,14 +60,23 @@ describe('ReadingListBoardComponent', () => {
     expect(drag.nativeElement.querySelector('select, button')).toBeNull();
   });
 
-  it('moves and reorders cards through CDK drop handling', () => {
+  it('moves and reorders cards through CDK drop handling', async () => {
     store.add(book('978-2'));
-    fixture.detectChanges();
+    await fixture.whenStable();
     const entry = store.entries().find(candidate => candidate.isbn === '978-2') as ReadingListEntry;
     const component = fixture.componentInstance as unknown as {
-      drop: (event: { item: { data: ReadingListEntry }; currentIndex: number }, status: 'want-to-read') => void;
+      drop: (
+        event: {
+          item: {
+            data: ReadingListEntry;
+          };
+          currentIndex: number;
+        },
+        status: 'want-to-read'
+      ) => void;
     };
     component.drop({ item: { data: entry }, currentIndex: 0 }, 'want-to-read');
+    await fixture.whenStable();
 
     expect(
       store
@@ -78,31 +91,90 @@ describe('ReadingListBoardComponent', () => {
     const link = card.querySelector('a') as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/books/978-1');
     expect(link.querySelector('button, select')).toBeNull();
-    expect(link.draggable).toBeFalse();
+    expect(link.draggable).toBe(false);
     expect(card.querySelector('.cover-letter')?.textContent).toBe('T');
   });
 
-  it('moves a card to another column through its drop target', () => {
+  it('moves a card to another column and persists the rendered column state', async () => {
     const entry = store.entries()[0];
     const component = fixture.componentInstance as unknown as {
-      drop: (event: { item: { data: ReadingListEntry }; currentIndex: number }, status: 'read') => void;
+      drop: (
+        event: {
+          item: {
+            data: ReadingListEntry;
+          };
+          currentIndex: number;
+        },
+        status: 'read'
+      ) => void;
     };
     component.drop({ item: { data: entry }, currentIndex: 0 }, 'read');
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('#read article')?.textContent).toContain('Title 978-1');
-    expect(fixture.nativeElement.querySelector('#want-to-read article')).toBeNull();
+    await fixture.whenStable();
+    const readColumn = fixture.nativeElement.querySelector('[data-status="read"]') as HTMLElement;
+    const sourceColumn = fixture.nativeElement.querySelector('[data-status="want-to-read"]') as HTMLElement;
+    expect(readColumn.querySelector('article')?.textContent).toContain('Title 978-1');
+    expect(sourceColumn.querySelector('article')).toBeNull();
+    expect(readColumn.querySelector('.column-count')?.getAttribute('aria-label')).toBe('1 books');
+    expect(sourceColumn.querySelector('.column-count')?.getAttribute('aria-label')).toBe('0 books');
     expect(JSON.parse(localStorage.getItem('reading-list:v1')!).entries[0].status).toBe('read');
   });
 
-  it('replaces a broken cover with the book initial', () => {
+  it('replaces a broken cover with the book initial', async () => {
     store.add({ ...book('978-2'), cover: '/missing-cover.jpg' });
-    fixture.detectChanges();
+    await fixture.whenStable();
     const cover = fixture.nativeElement.querySelector('.book-cover img') as HTMLImageElement;
-    expect(cover.draggable).toBeFalse();
+    expect(cover.draggable).toBe(false);
     cover.dispatchEvent(new Event('error'));
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('.book-cover img')).toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.cover-letter').length).toBe(2);
+  });
+
+  it('renders and persists metadata delivered by a later HTTP callback', async () => {
+    const response = new Subject<Book>();
+    api.getBookByIsbn.mockReturnValue(response);
+    store.retry('978-1');
+    await fixture.whenStable();
+
+    response.next({ ...book('978-1', 'refreshed-id'), title: 'Fresh title' });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('.card-title')?.textContent).toBe('Fresh title');
+    expect(JSON.parse(localStorage.getItem('reading-list:v1')!).entries[0].book).toEqual(
+      expect.objectContaining({ id: 'refreshed-id', title: 'Fresh title' })
+    );
+  });
+
+  it('removes a card while its refresh is pending and ignores the late HTTP response', async () => {
+    const response = new Subject<Book>();
+    api.getBookByIsbn.mockReturnValue(response);
+    store.retry('978-1');
+    store.remove('978-1');
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('article')).toBeNull();
+    response.next({ ...book('978-1', 'stale-id'), title: 'Stale title' });
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('article')).toBeNull();
+    expect(JSON.parse(localStorage.getItem('reading-list:v1')!).entries).toEqual([]);
+  });
+
+  it('shows the storage fallback while keeping newly added books visible', async () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('unavailable');
+    });
+    try {
+      store.add(book('978-2'));
+      await fixture.whenStable();
+
+      expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain(
+        'Changes are kept for this session'
+      );
+      expect(fixture.nativeElement.querySelectorAll('article').length).toBe(2);
+    } finally {
+      setItem.mockRestore();
+    }
   });
 
   it('hides only the target empty state while a drag placeholder is present and restores it on exit', () => {

@@ -54,9 +54,9 @@ describe('BookApiClient', () => {
       let failed = false;
       client.getBooksPage(1).subscribe({ error: () => (failed = true) });
       const request = http.expectOne(req => req.url === 'http://localhost:4730/books');
-      expect(request.request.params.has('q')).toBeFalse();
+      expect(request.request.params.has('q')).toBe(false);
       request.flush([], { headers: total === null ? {} : { 'X-Total-Count': total } });
-      expect(failed).toBeTrue();
+      expect(failed).toBe(true);
     });
   }
 
@@ -117,7 +117,7 @@ describe('BookApiClient', () => {
     client.getBooks().subscribe();
     const request = http.expectOne(req => req.url === 'http://localhost:4730/books');
     expect(request.request.params.get('_limit')).toBe('10');
-    expect(request.request.params.has('q')).toBeFalse();
+    expect(request.request.params.has('q')).toBe(false);
     request.flush([]);
   });
 

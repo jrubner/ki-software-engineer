@@ -39,7 +39,7 @@ Installed dependencies and Chromium are available. Use:
 
 - `node node_modules/@angular/cli/bin/ng.js build --configuration development`
 - `npm run build`
-- `npm test -- --watch=false --browsers=ChromeHeadless`
+- `npm test -- --watch=false`
 - `node .github/scripts/issue-implementation.cjs test` (all application and new
   Playwright specs, excluding the external Playwright website example)
 - Focused tests for the changed behavior, plus `git diff --check`.

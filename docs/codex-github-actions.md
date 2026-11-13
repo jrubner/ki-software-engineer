@@ -187,9 +187,11 @@ plus root `ARCHITECTURE.md`, `REFACTORING.md`, and `README.md`. Instruction file
 skills, workflows, dependency/configuration changes, binary assets, and symlinks
 require a separate maintainer change. Handoffs are limited to 30 files and
 100,000 UTF-8 bytes, including the report; larger requirements must be split.
-The existing Angular 20 Karma builder has explicit Jasmine/Karma development
-dependencies and HTTP contract tests. Run it with
-`npm test -- --watch=false --browsers=ChromeHeadless`. Infrastructure failures
+The Angular 21 unit-test builder runs Vitest with WebdriverIO in headless Chrome,
+including HTTP contract and real-browser CSS/CDK tests. CI uses the current Node
+22 release (at least 22.23.4); the browser runner also supports Node 24.22.1+.
+The Ubuntu runner must provide Chrome and network access for driver resolution.
+Run the suite with `npm test -- --watch=false`. Infrastructure failures
 remain blockers; the agent cannot change dependencies or hide failed tests.
 
 A blocked or already-satisfied result creates an evidence comment and leaves the

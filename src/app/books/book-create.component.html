@@ -5,20 +5,20 @@
   <section class="surface-panel p-5 sm:p-8">
     <p class="eyebrow mb-3">Grow your collection</p>
     <h1 class="text-3xl font-bold tracking-tight text-ink mb-8">Add a book</h1>
-    <form [formGroup]="form" (ngSubmit)="save()" novalidate [attr.aria-busy]="saving()">
-      <fieldset [disabled]="saving()" class="grid min-w-0 gap-6 sm:grid-cols-2">
+    <form (submit)="onSubmit($event)" novalidate [attr.aria-busy]="saving()">
+      <fieldset class="grid min-w-0 gap-6 sm:grid-cols-2">
         <legend class="sr-only">Book details</legend>
         <div class="book-field">
           <label for="create-isbn">ISBN</label>
           <input
             id="create-isbn"
-            formControlName="isbn"
-            required
-            [attr.aria-invalid]="(form.controls.isbn.touched && form.controls.isbn.invalid) || duplicateIsbn()"
+            [formField]="form.isbn"
+            (input)="onIsbnInput()"
+            [attr.aria-invalid]="(form.isbn().touched() && form.isbn().invalid()) || duplicateIsbn()"
             aria-describedby="isbn-error"
           />
           <div id="isbn-error" [attr.role]="duplicateIsbn() ? 'alert' : null">
-            @if (form.controls.isbn.touched && form.controls.isbn.invalid) {
+            @if (form.isbn().touched() && form.isbn().invalid()) {
               <p class="text-sm text-danger">Enter an ISBN.</p>
             }
             @if (duplicateIsbn()) {
@@ -30,79 +30,75 @@
           <label for="create-title">Title</label>
           <input
             id="create-title"
-            formControlName="title"
-            required
-            [attr.aria-invalid]="form.controls.title.touched && form.controls.title.invalid"
+            [formField]="form.title"
+            [attr.aria-invalid]="form.title().touched() && form.title().invalid()"
             aria-describedby="title-error"
           />
           <div id="title-error">
-            @if (form.controls.title.touched && form.controls.title.invalid) {
+            @if (form.title().touched() && form.title().invalid()) {
               <p class="text-sm text-danger">Enter a title.</p>
             }
           </div>
         </div>
         <div class="book-field">
           <label for="create-subtitle">Subtitle</label>
-          <input id="create-subtitle" formControlName="subtitle" />
+          <input id="create-subtitle" [formField]="form.subtitle" />
         </div>
         <div class="book-field">
           <label for="create-author">Author</label>
           <input
             id="create-author"
-            formControlName="author"
-            required
-            [attr.aria-invalid]="form.controls.author.touched && form.controls.author.invalid"
+            [formField]="form.author"
+            [attr.aria-invalid]="form.author().touched() && form.author().invalid()"
             aria-describedby="author-error"
           />
           <div id="author-error">
-            @if (form.controls.author.touched && form.controls.author.invalid) {
+            @if (form.author().touched() && form.author().invalid()) {
               <p class="text-sm text-danger">Enter an author.</p>
             }
           </div>
         </div>
         <div class="book-field">
           <label for="create-publisher">Publisher</label>
-          <input id="create-publisher" formControlName="publisher" />
+          <input id="create-publisher" [formField]="form.publisher" />
         </div>
         <div class="book-field">
           <label for="create-pages">Pages</label>
           <input
             id="create-pages"
             type="number"
-            min="1"
             step="1"
-            formControlName="numPages"
-            required
-            [attr.aria-invalid]="form.controls.numPages.touched && form.controls.numPages.invalid"
+            [formField]="form.numPages"
+            [attr.aria-invalid]="form.numPages().touched() && form.numPages().invalid()"
             aria-describedby="pages-error"
           />
           <div id="pages-error">
-            @if (form.controls.numPages.touched && form.controls.numPages.invalid) {
+            @if (form.numPages().touched() && form.numPages().invalid()) {
               <p class="text-sm text-danger">Enter a positive whole number of pages.</p>
             }
           </div>
         </div>
         <div class="book-field">
           <label for="create-price">Price</label>
-          <input id="create-price" formControlName="price" />
+          <input id="create-price" [formField]="form.price" />
         </div>
         <div class="book-field sm:col-span-2">
           <label for="create-cover">Cover URL</label>
-          <input id="create-cover" formControlName="cover" />
+          <input id="create-cover" [formField]="form.cover" />
         </div>
         <div class="book-field sm:col-span-2">
           <label for="create-description">Description</label>
-          <textarea id="create-description" formControlName="abstract" rows="5"></textarea>
+          <textarea id="create-description" [formField]="form.abstract" rows="5"></textarea>
         </div>
         <div class="book-field">
           <label for="create-date">Publication date</label>
-          <input id="create-date" formControlName="publishedAt" placeholder="YYYY-MM-DD" />
+          <input id="create-date" [formField]="form.publishedAt" placeholder="YYYY-MM-DD" />
         </div>
         <div class="book-field">
           <label for="create-coauthors">Co-authors</label>
           <textarea
             id="create-coauthors"
-            formControlName="coAuthors"
+            [formField]="form.coAuthors"
             rows="3"
             aria-describedby="coauthors-help"
           ></textarea>

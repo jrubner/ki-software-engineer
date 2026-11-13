@@ -19,41 +19,42 @@ BookMonkey is an Angular workshop application with a searchable, paginated book 
 
 Versions below are declarations from [package.json](package.json); ranges do not identify an exact installed version. [package-lock.json](package-lock.json) records dependency resolutions.
 
-| Technology             | Declared version                       | Role in this repository                                                                        |
-| ---------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Angular                | Core packages 20.2.1; CLI/build 20.2.0 | Standalone components, routing, dependency injection, HTTP, and reactive/template-driven forms |
-| TypeScript             | 5.9.2                                  | Application types; strict compiler and template checks in [tsconfig.json](tsconfig.json)       |
-| RxJS                   | 7.8.0                                  | Observable HTTP responses consumed through subscriptions                                       |
-| Zone.js                | 0.15.0                                 | Change detection with event coalescing configured in [app.config.ts](src/app/app.config.ts)    |
-| Tailwind CSS / PostCSS | 4.1.12 / 8.5.6                         | Utility styling through [styles.css](src/styles.css) and [.postcssrc.json](.postcssrc.json)    |
-| Angular Material / CDK | ^20.2.0 / 20.2.0                       | Reading-list drag and drop; unused snackbar helper and theme overrides                         |
-| Prettier               | 3.6.2                                  | Formatting configured in [.prettierrc](.prettierrc)                                            |
-| Playwright             | ^1.55.0                                | Book detail feature tests with controlled API responses, alongside external-site examples      |
+| Technology             | Declared version                         | Role in this repository                                                                      |
+| ---------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Angular                | Core packages 21.2.26; CLI/build 21.2.30 | Standalone components, routing, dependency injection, HTTP, and experimental Signal Forms    |
+| TypeScript             | 5.9.2                                    | Application types; strict compiler and template checks in [tsconfig.json](tsconfig.json)     |
+| RxJS                   | 7.8.0                                    | Observable HTTP responses consumed through subscriptions                                     |
+| Change detection       | Angular 21 zoneless default              | Signals, template events and Angular notifications schedule rendering; no Zone.js dependency |
+| Tailwind CSS / PostCSS | 4.1.12 / 8.5.6                           | Utility styling through [styles.css](src/styles.css) and [.postcssrc.json](.postcssrc.json)  |
+| Angular Material / CDK | ^21.2.14 / 21.2.14                       | Reading-list drag and drop; unused snackbar helper and theme overrides                       |
+| Prettier               | 3.6.2                                    | Formatting configured in [.prettierrc](.prettierrc)                                          |
+| Vitest / WebdriverIO   | ^4.1.12 / ^10.2.0                        | Angular unit tests in headless Chrome, including real CSS/CDK behavior                       |
+| Playwright             | ^1.65.0                                  | Separate acceptance suite; not executed during the Angular 21 upgrade                        |
 
-The manifest also declares `@ngrx/signals` 20.0.1, `@angular-architects/ngrx-toolkit` ^20.1.0, and `@tanstack/angular-query-experimental` ^5.85.5. None is imported or configured in the current application source; list state uses Angular signals in [BookListComponent](src/app/books/book-list.component.ts). This was checked against imports throughout `src/` and the providers in [app.config.ts](src/app/app.config.ts).
+The manifest also declares `@ngrx/signals` ^21.1.1, `@angular-architects/ngrx-toolkit` ^21.0.1, and `@tanstack/angular-query-experimental` ^5.107.1. These libraries are intentionally retained and updated to compatible versions; none is imported or configured in the current application source. List state uses Angular signals in [BookListComponent](src/app/books/book-list.component.ts).
 
 Likewise, `@angular/ssr`, `@angular/platform-server`, and Express are declared, but there is no server entry point or SSR build configuration in [angular.json](angular.json). The implemented application is bootstrapped in the browser. Dependency presence alone does not establish an architectural capability.
 
 ## Source layout and responsibilities
 
-| Path                                                                                                         | Responsibility                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| [src/main.ts](src/main.ts)                                                                                   | Calls `bootstrapApplication(App, appConfig)` and logs bootstrap failures                                         |
-| [src/app/app.config.ts](src/app/app.config.ts)                                                               | Registers router, HTTP client, animations, global browser error listeners, and zone-based change detection       |
-| [src/app/app.ts](src/app/app.ts), [app.html](src/app/app.html)                                               | Root shell with header, router outlet, and footer                                                                |
-| [src/app/app.routes.ts](src/app/app.routes.ts)                                                               | Lazy-loads collection, creation, editing, details, reading list, and game; redirects unmatched paths to the list |
-| [src/app/books/book-list.component.ts](src/app/books/book-list.component.ts)                                 | Loads books, owns search/loading/results state, and renders list and empty states                                |
-| [src/app/books/book-item.component.ts](src/app/books/book-item.component.ts)                                 | Renders the entire book card as one keyboard-accessible link using the book's ISBN                               |
-| [src/app/books/book-detail.component.ts](src/app/books/book-detail.component.ts)                             | Loads route-selected book details and renders loading, success, not-found, and API-error states                  |
-| [src/app/books/book-edit.component.ts](src/app/books/book-edit.component.ts)                                 | Loads an existing book, owns its typed Reactive Form, validates changes, saves, and handles failures             |
-| [src/app/books/book-create.component.ts](src/app/books/book-create.component.ts)                             | Validates a new book, checks ISBN availability, and saves through the API                                        |
-| [src/app/reading-list/reading-list.store.ts](src/app/reading-list/reading-list.store.ts)                     | Owns reading-list membership, order, storage, and metadata refresh                                               |
-| [src/app/reading-list/reading-list-board.component.ts](src/app/reading-list/reading-list-board.component.ts) | Renders status columns, book covers, counts, and whole-card CDK drag and drop                                    |
-| [src/app/books/book-api-client.service.ts](src/app/books/book-api-client.service.ts)                         | Root-provided HTTP client for the external books endpoint                                                        |
-| [src/app/books/book.ts](src/app/books/book.ts)                                                               | Defines the frontend's expected book shape                                                                       |
-| [src/app/shared/toast.service.ts](src/app/shared/toast.service.ts)                                           | Root-provided `MatSnackBar` wrapper; currently unused by the book feature                                        |
-| [public/](public/)                                                                                           | Static assets copied by the Angular build                                                                        |
-| [tests/](tests/), [tests-examples/](tests-examples/)                                                         | BookMonkey feature tests plus Playwright samples; only `tests/` is selected by the current configuration         |
+| Path                                                                                                         | Responsibility                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| [src/main.ts](src/main.ts)                                                                                   | Calls `bootstrapApplication(App, appConfig)` and logs bootstrap failures                                                    |
+| [src/app/app.config.ts](src/app/app.config.ts)                                                               | Registers router, HTTP client, animations and global browser error listeners; Angular 21 supplies zoneless change detection |
+| [src/app/app.ts](src/app/app.ts), [app.html](src/app/app.html)                                               | Root shell with header, router outlet, and footer                                                                           |
+| [src/app/app.routes.ts](src/app/app.routes.ts)                                                               | Lazy-loads collection, creation, editing, details, reading list, and game; redirects unmatched paths to the list            |
+| [src/app/books/book-list.component.ts](src/app/books/book-list.component.ts)                                 | Loads books, owns search/loading/results state, and renders list and empty states                                           |
+| [src/app/books/book-item.component.ts](src/app/books/book-item.component.ts)                                 | Renders the entire book card as one keyboard-accessible link using the book's ISBN                                          |
+| [src/app/books/book-detail.component.ts](src/app/books/book-detail.component.ts)                             | Loads route-selected book details and renders loading, success, not-found, and API-error states                             |
+| [src/app/books/book-edit.component.ts](src/app/books/book-edit.component.ts)                                 | Loads an existing book, owns a typed Signal Form, validates changes, saves, and handles failures                            |
+| [src/app/books/book-create.component.ts](src/app/books/book-create.component.ts)                             | Validates a new book, checks ISBN availability, and saves through the API                                                   |
+| [src/app/reading-list/reading-list.store.ts](src/app/reading-list/reading-list.store.ts)                     | Owns reading-list membership, order, storage, and metadata refresh                                                          |
+| [src/app/reading-list/reading-list-board.component.ts](src/app/reading-list/reading-list-board.component.ts) | Renders status columns, book covers, counts, and whole-card CDK drag and drop                                               |
+| [src/app/books/book-api-client.service.ts](src/app/books/book-api-client.service.ts)                         | Root-provided HTTP client for the external books endpoint                                                                   |
+| [src/app/books/book.ts](src/app/books/book.ts)                                                               | Defines the frontend's expected book shape                                                                                  |
+| [src/app/shared/toast.service.ts](src/app/shared/toast.service.ts)                                           | Root-provided `MatSnackBar` wrapper; currently unused by the book feature                                                   |
+| [public/](public/)                                                                                           | Static assets copied by the Angular build                                                                                   |
+| [tests/](tests/), [tests-examples/](tests-examples/)                                                         | BookMonkey feature tests plus Playwright samples; only `tests/` is selected by the current configuration                    |
 
 The structure groups books under `books/`, the local board under `reading-list/`, and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. Substantial views use colocated HTML files; request/state logic remains in TypeScript. The shorter book card remains inline. The [route configuration](src/app/app.routes.ts) lazy-loads the list, detail, edit, create, reading-list board, and game components through `loadComponent`. Components use `OnPush`, built-in control flow, signal inputs, and local signals. Detail request state remains an Observable consumed by `AsyncPipe`.
 
@@ -210,7 +211,7 @@ The following flow is supported by [BookListComponent](src/app/books/book-list.c
 1. `BookListComponent.ngOnInit()` loads books with its `pageSize` input, which defaults to 10.
 2. `BookApiClient.getBooksPage()` sends `GET http://localhost:4730/books` with `_page`, `_limit`, and optional `q`. It returns `BookPage`, reading `X-Total-Count` as a nonnegative safe integer; missing or invalid totals fail the request. The compatible `getBooks()` method remains available. Exact server search semantics and CORS exposure of the total header require external API verification.
 3. A `switchMap` stream cancels replaced requests. Signals own loading, errors, page, total, and cards; stale cards are cleared during loading. Each card has a required signal input and `@for` tracks its `id`.
-4. Search retains `FormsModule` and `ngModel`. A destruction-owned 300 ms timer applies the search on page one; clearing cancels that timer and immediately resets. Paging retains the applied query.
+4. Search uses a typed signal model, `form()` and `[formField]`. A destruction-owned 300 ms timer applies the search on page one; clearing cancels that timer and immediately resets. Paging retains the applied query; page count is computed from totals and page size.
 5. Previous/Next controls disable at boundaries and while loading. Errors offer retry of the same page/query. A response that makes the current page invalid triggers a corrected request for the last valid page. Zero totals render the empty state.
 
 The [Book interface](src/app/books/book.ts) includes `id`, `isbn`, `title`, optional `subtitle`, `author`, `publisher`, `numPages`, `price`, `cover`, `abstract`, and `userId`. It also models optional `publishedAt?: string` and `coAuthors?: string[]`, based on the locally served API documentation. The HTTP generic expresses a compile-time expectation; no runtime response validation is implemented. A sample response alone does not establish field types or guarantees for all responses.
@@ -230,7 +231,7 @@ Success renders bibliographic data, optional publication date and nonempty co-au
 ### Book editing (2026-11-13)
 
 Source-confirmed: the detail page links to `/books/:isbn/edit`. The lazy editor
-loads independently through `getBookByIsbn()`, uses typed Reactive Forms and
+loads independently through `getBookByIsbn()`, uses typed Signal Forms and
 `OnPush`, and retains ISBN, `id`, and `userId` in the outgoing book. Replaceable
 reads use `switchMap`; route changes reset form/error state and cancel stale
 reads. Destruction owns both read and write subscriptions. A late write response
@@ -505,7 +506,7 @@ The detail feature was checked separately from the earlier onboarding review. Ex
 
 The first automated run could not launch because Playwright's matching Chromium Headless Shell was missing. It was installed with `node node_modules/@playwright/test/cli.js install chromium --only-shell`. A subsequent run exposed a test interception pattern that did not cover nested API paths; the matcher was corrected before all nine cases passed. No production dependency or shared service was changed. The earlier Karma failure was not rerun because this feature uses Playwright.
 
-## Current limitations and open questions
+## Historical onboarding limitations and open questions
 
 - [playwright.config.ts](playwright.config.ts) selects Chromium, Firefox, and WebKit and configures `npm start` as its web server. However, [tests/example.spec.ts](tests/example.spec.ts) visits `https://playwright.dev/`, so passing those tests would not verify BookMonkey. The TodoMVC sample in `tests-examples/` is outside the configured test directory.
 - `npm test` targets Karma in [angular.json](angular.json), and [tsconfig.spec.json](tsconfig.spec.json) references Jasmine types. The [manifest](package.json) does not declare Karma/Jasmine packages, and there are no application `*.spec.ts` files under `src/`. The onboarding run confirmed a missing `karma-jasmine` module. Application unit tests remain absent; the detail feature now has dedicated automated browser coverage.
@@ -521,6 +522,9 @@ request sequencing, and list error rendering are historical. The authorized
 unit-runner repair and 2026-11-13 pagination delivery supersede them: the runner
 works, reads cancel, timers have cleanup, and failures show an explicit retry
 state. External contract and browser coverage limitations still apply.
+
+The Angular 21 upgrade described below also supersedes the historical Karma and
+Jasmine setup. Current unit tests run through Vitest in headless Chrome.
 
 ## Reflection: using AI for project onboarding
 
@@ -610,3 +614,70 @@ verified until those corrections reach `main` and the live runs succeed.
 - The initial browser run passed 50 cases and missed one transient anticipation focus state. Three isolated repeats confirmed the polling issue. Sampling the same class assertions every 50 ms passed three targeted repeats and the full 51-case rerun; production animation behavior was unchanged.
 - Whitespace checks and formatting with the checkout's existing line endings passed. Existing services were reused. No screenshots were taken; Firefox and WebKit were not run.
 - GitHub repository validation passed for the modernization and documentation pull requests. Automated Codex review remains blocked by an invalidated `OPENAI_API_KEY` repository secret (HTTP 401); a maintainer must replace that secret before review can run successfully.
+
+## Angular 21 upgrade (2026-11-13)
+
+The official framework/CLI and Material migrations ran on baseline `b416a65`.
+Their installed migrations needed no source transformations; the existing
+application builder, block control flow and compiler settings were already
+compatible. Resolved versions are Angular 21.2.26, CLI/build/SSR 21.2.30 and
+Material/CDK 21.2.14. All existing companion libraries are retained and updated
+compatibly, including currently unused NgRx, query and server packages.
+
+Application bootstrap uses Angular 21's default zoneless scheduling. Zone.js,
+its test support and all polyfills have been removed. Header listeners no longer
+need NgZone wrapping. Theme, reading-list and game callbacks already write signals;
+their browser-event, HTTP, timer and animation-completion behavior now has
+representative zoneless unit coverage. Native Web Animations, RxJS cancellation,
+routes, payload identity and localStorage formats remain unchanged. No legacy
+Angular animation bindings were found; the existing `provideAnimations()` and
+animations dependency remain intentionally for library compatibility.
+
+All application forms now use the explicitly requested experimental Angular 21
+Signal Forms API. Create/edit use typed signal models, schema validation and
+`FormField`; number inputs retain nullable numeric values, dates remain optional
+text, and textarea co-authors are mapped to transport arrays. Required/minimum
+metadata comes from the schema. Whitespace and integer validators preserve the
+existing contract. Native submit handlers prevent navigation, mark validated
+fields touched individually and guard concurrent requests. Schema disabling
+tracks saving state; server errors preserve entered values. Edit resets both
+model and form state when the route changes. Search uses a Signal Forms field,
+retains the 300 ms debounce and immediate clear, and derives total pages with
+`computed` while preserving request cancellation and applied-query pagination.
+
+The unit builder is `@angular/build:unit-test`, using Vitest/browser-webdriverio
+4.1.12 and WebdriverIO 10.2.0 in headless Chrome at 1920 × 1080. Node engines are
+`^22.23.4 || ^24.22.1`, reflecting the stricter browser-provider requirement.
+The reviewed official Jasmine migration is supplemented by async stabilization,
+partial fake timers for debounce and isolated/restored spies. Automatic failure
+screenshots are disabled. Existing Playwright application scenarios remain a
+separate acceptance layer and were not executed for this upgrade.
+
+### Upgrade verification and limitations
+
+- Baseline and post-migration gates each passed 78 original tests and both builds.
+  The final suite passes 103 tests in 11 files, including the previous coverage,
+  five pure game-engine cases and additional zoneless callback regressions.
+  Assertions use normal Angular stability after external work completes rather
+  than repeated forced rendering. The final automation guard suite passes 61 tests.
+- A separate ignored copy of current sources passed `npm ci`, all 103 unit tests
+  and both builds in sequence. This avoids native module locks from an independently
+  running development server, which was not stopped. The working tree also passed
+  all 103 tests. No additional application server was started.
+- Production initial bundle is 369.41 kB; the lazy game chunk is 49.91 kB. Existing
+  game CSS remains 7.78 kB against the unchanged 4 kB warning / 8 kB error budgets.
+  Production builds still require Google Fonts network access. Dependency and
+  bundle scans find no installed Zone.js or its runtime markers.
+- CI workflows, automation instructions, README and the tracked Red/Green skill
+  runner pointers use the verified `npm test -- --watch=false` command. Scoped
+  formatting, both skill validators and whitespace checks pass. Live GitHub CI and
+  the previously invalidated API secret were not rechecked; `gh` is unavailable.
+- Compatible patch updates remove high/critical audit findings. Nineteen moderate
+  transitive CLI glob/minimatch findings remain; the proposed CLI 22 remedy exceeds
+  the Angular 21 target. Signal Forms remain experimental by explicit decision.
+- No interactive browser or Playwright execution was authorized. Visual drag,
+  responsive layout and complete game acceptance remain user-owned, with the
+  checklist in [ANGULAR21-UPGRADE-PLAN.md](ANGULAR21-UPGRADE-PLAN.md). Three initial
+  automatic Vitest failure captures were removed before disabling that feature.
+  No screenshots are retained. Verification completed before the user separately
+  authorized commit, push and PR creation; merge requires separate authorization.

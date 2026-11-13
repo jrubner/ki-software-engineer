@@ -160,7 +160,7 @@ jobs:
         working-directory: source
         run: |
           node --test .github/scripts/*.test.cjs
-          npm test -- --watch=false --browsers=ChromeHeadless
+          npm test -- --watch=false
           node node_modules/@angular/cli/bin/ng.js build --configuration development
           npm run build
           node -e "require('../.github/scripts/issue-implementation.cjs').runApplicationTests(process.cwd())"

@@ -54,7 +54,7 @@ describe('Book feature navigation', () => {
     const add = Array.from(harness.routeNativeElement!.querySelectorAll('button')).find(button =>
       button.textContent?.includes('Add to reading list')
     );
-    expect(add).withContext('detail reading-list action').toBeDefined();
+    expect(add, 'detail reading-list action').toBeDefined();
     add!.click();
     harness.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('In reading list');
@@ -75,7 +75,7 @@ describe('Book feature navigation', () => {
     button.click();
     harness.detectChanges();
     expect(button.getAttribute('aria-pressed')).toBe('true');
-    expect(button.disabled).toBeFalse();
+    expect(button.disabled).toBe(false);
     expect(button.getAttribute('aria-label')).toBe('Remove from reading list');
     const loader = TestbedHarnessEnvironment.loader(harness.fixture);
     const tooltip = await loader.getHarness(MatTooltipHarness.with({ selector: '.detail-action-primary' }));

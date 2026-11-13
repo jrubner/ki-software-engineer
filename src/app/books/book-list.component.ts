@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
+import { FormField, form } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of, Subject, switchMap } from 'rxjs';
 import { Book, BookPage } from './book';
@@ -14,7 +14,7 @@ interface PageRequest {
 
 @Component({
   selector: 'app-book-list',
-  imports: [FormsModule, RouterLink, BookItemComponent],
+  imports: [FormField, RouterLink, BookItemComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-list.component.html'
 })
@@ -22,7 +22,8 @@ export class BookListComponent implements OnInit {
   readonly pageSize = input(10);
   protected readonly books = signal<Book[]>([]);
   protected readonly loading = signal(true);
-  protected readonly searchTerm = signal('');
+  protected readonly searchModel = signal({ term: '' });
+  protected readonly searchForm = form(this.searchModel);
   protected readonly page = signal(1);
   protected readonly totalCount = signal(0);
   protected readonly error = signal(false);
@@ -71,12 +72,10 @@ export class BookListComponent implements OnInit {
     this.destroyRef.onDestroy(() => clearTimeout(this.searchTimeout));
   }
 
-  protected get totalPages(): number {
-    return Math.max(1, Math.ceil(this.totalCount() / this.pageSize()));
-  }
+  protected readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalCount() / this.pageSize())));
 
   protected goToPage(page: number): void {
-    if (this.loading() || page < 1 || page > this.totalPages) return;
+    if (this.loading() || page < 1 || page > this.totalPages()) return;
     this.pageRequests.next({ page, search: this.appliedSearch });
   }
 
@@ -84,17 +83,18 @@ export class BookListComponent implements OnInit {
     this.pageRequests.next({ page: this.page(), search: this.appliedSearch });
   }
 
-  protected onSearchChange(): void {
+  protected onSearchChange(event: Event): void {
     clearTimeout(this.searchTimeout);
+    const searchTerm = (event.target as HTMLInputElement).value;
     this.searchTimeout = setTimeout(() => {
-      this.appliedSearch = this.searchTerm() || undefined;
+      this.appliedSearch = searchTerm || undefined;
       this.pageRequests.next({ page: 1, search: this.appliedSearch });
     }, 300);
   }
 
   protected clearSearch(): void {
     clearTimeout(this.searchTimeout);
-    this.searchTerm.set('');
+    this.searchModel.set({ term: '' });
     this.appliedSearch = undefined;
     this.pageRequests.next({ page: 1 });
   }
