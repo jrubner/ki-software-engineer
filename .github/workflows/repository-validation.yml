@@ -32,6 +32,8 @@ jobs:
         run: node node_modules/@playwright/test/cli.js install --with-deps chromium
       - name: Test automation guards
         run: node --test .github/scripts/*.test.cjs
+      - name: Test custom Angular MCP tools
+        run: npm run test.angular-mcp
       - name: Run Angular unit tests
         run: npm test -- --watch=false --browsers=ChromeHeadless
       - name: Build development and production bundles
