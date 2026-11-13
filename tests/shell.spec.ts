@@ -20,6 +20,7 @@ test.beforeEach(async ({ page }) => {
     url => url.origin === 'http://localhost:4730' && url.pathname.startsWith('/books'),
     route =>
       route.fulfill({
+        headers: { 'X-Total-Count': '24', 'Access-Control-Expose-Headers': 'X-Total-Count' },
         json:
           new URL(route.request().url()).pathname === '/books'
             ? Array.from({ length: 24 }, (_, index) => ({
@@ -171,6 +172,8 @@ test('keyboard focus reveals the hidden header and route changes keep navigation
   await page.getByRole('textbox').evaluate(element => (element as HTMLInputElement).focus({ preventScroll: true }));
   await expectHeaderHidden(page);
   await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('link', { name: 'Add book', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
   await expect(page.getByRole('button', { name: 'Dark mode', exact: true })).toBeFocused();
   await expectHeaderOnscreen(page);
   await page.getByRole('link', { name: 'BookMonkey home' }).click();
@@ -200,6 +203,9 @@ test('footer follows long content and sits at the viewport bottom on short pages
   await expect(footer).toBeInViewport();
   await page.goto(`${appUrl}/books/9780000000001`);
   await expect(page.getByRole('heading', { name: book.title, exact: true })).toBeVisible();
+  await page.route('http://localhost:4730/books/missing', route => route.fulfill({ status: 404, json: {} }));
+  await page.goto(`${appUrl}/books/missing`);
+  await expect(page.getByRole('heading', { name: 'Book not found', exact: true })).toBeVisible();
   await page.setViewportSize({ width: 1920, height: 1080 });
   await expect
     .poll(() => footer.evaluate(element => Math.round(element.getBoundingClientRect().bottom) - innerHeight))

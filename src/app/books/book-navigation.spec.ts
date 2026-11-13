@@ -33,6 +33,11 @@ describe('Book feature navigation', () => {
   });
 
   afterEach(() => {
+    http
+      .match(request => request.params.has('editorialRecommendation_like'))
+      .forEach(request => {
+        if (!request.cancelled) request.flush([]);
+      });
     http.verify();
     localStorage.removeItem('reading-list:v1');
   });

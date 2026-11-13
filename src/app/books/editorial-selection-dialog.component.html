@@ -1,0 +1,104 @@
+<div class="selection-dialog">
+  <header>
+    <div>
+      <p class="eyebrow">Editorial selection</p>
+      <h2 id="editorial-dialog-title">Choose recommendations</h2>
+    </div>
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="Close recommendations dialog"
+      [disabled]="saving()"
+      (click)="dialog.close()"
+    >
+      ✕
+    </button>
+  </header>
+  <div class="dialog-body" [attr.aria-busy]="saving()">
+    <p class="text-muted mb-4">
+      Choose up to four books for all book detail pages. The book currently being viewed is hidden there.
+    </p>
+    <p class="selection-count" aria-live="polite">{{ selected().length }} of 4 selected</p>
+    @if (selected().length) {
+      <ul class="selected-books" aria-label="Selected recommendations">
+        @for (book of selected(); track book.isbn) {
+          <li>
+            <span>{{ book.title }}</span
+            ><button
+              type="button"
+              [disabled]="saving()"
+              [attr.aria-label]="'Remove ' + book.title"
+              (click)="toggle(book)"
+            >
+              ✕
+            </button>
+          </li>
+        }
+      </ul>
+    }
+    <label for="editorial-search" class="block font-medium mb-2">Search books</label>
+    <input
+      id="editorial-search"
+      type="search"
+      [formField]="searchForm.term"
+      (input)="search(300)"
+      placeholder="Search by title or author"
+      [readOnly]="saving()"
+    />
+    @if (loading()) {
+      <p role="status" class="feedback">Loading books...</p>
+    } @else if (error()) {
+      <div role="alert" class="feedback">
+        <p>Unable to load books.</p>
+        <button type="button" class="text-link" (click)="changePage(page())">Retry search</button>
+      </div>
+    } @else if (!results().length) {
+      <p role="status" class="feedback">No books found.</p>
+    } @else {
+      <div class="search-results">
+        @for (book of results(); track book.isbn) {
+          <label class="search-result" [class.is-selected]="has(book.isbn)">
+            <app-recommendation-cover [cover]="book.cover" />
+            <span class="result-copy"
+              ><span class="text-muted">{{ book.author }}</span
+              ><strong>{{ book.title }}</strong></span
+            >
+            <input
+              type="checkbox"
+              [checked]="has(book.isbn)"
+              [disabled]="saving() || (!has(book.isbn) && selected().length >= 4)"
+              [attr.aria-label]="'Recommend ' + book.title"
+              (change)="toggle(book)"
+            />
+          </label>
+        }
+      </div>
+      <nav class="pagination" aria-label="Recommendation search pages">
+        <button type="button" class="text-link" [disabled]="saving() || page() <= 1" (click)="changePage(page() - 1)">
+          Previous results
+        </button>
+        <span>Page {{ page() }}</span>
+        <button
+          type="button"
+          class="text-link"
+          [disabled]="saving() || page() * 8 >= total()"
+          (click)="changePage(page() + 1)"
+        >
+          Next results
+        </button>
+      </nav>
+    }
+    @if (saveError()) {
+      <p role="alert" class="text-danger mt-4">
+        Unable to finish saving. Some changes may already be saved. Retry to finish, or cancel to reload the saved
+        selection.
+      </p>
+    }
+  </div>
+  <footer>
+    <button type="button" class="text-link" [disabled]="saving()" (click)="dialog.close()">Cancel</button>
+    <button type="button" class="button-primary" [disabled]="saving()" (click)="save()">
+      {{ saving() ? 'Saving...' : 'Save recommendations' }}
+    </button>
+  </footer>
+</div>

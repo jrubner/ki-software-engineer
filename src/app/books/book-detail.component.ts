@@ -7,12 +7,13 @@ import { catchError, distinctUntilChanged, map, Observable, of, startWith, switc
 import { Book } from './book';
 import { BookApiClient } from './book-api-client.service';
 import { ReadingListStore } from '../reading-list/reading-list.store';
+import { BookRecommendationsComponent } from './book-recommendations.component';
 
 type BookDetailState = { status: 'loading' | 'not-found' | 'error'; book?: never } | { status: 'success'; book: Book };
 
 @Component({
   selector: 'app-book-detail',
-  imports: [AsyncPipe, RouterLink, MatTooltip],
+  imports: [AsyncPipe, RouterLink, MatTooltip, BookRecommendationsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-detail.component.html',
   styleUrl: './book-detail.component.css'

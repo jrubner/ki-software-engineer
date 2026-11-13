@@ -25,7 +25,10 @@ async function mockBooks(page: Page) {
     async route => {
       const url = new URL(route.request().url());
       const result = url.pathname === '/books' ? [book] : url.pathname.endsWith(secondBook.isbn) ? secondBook : book;
-      await route.fulfill({ json: result });
+      await route.fulfill({
+        json: result,
+        headers: { 'X-Total-Count': '1', 'Access-Control-Expose-Headers': 'X-Total-Count' }
+      });
     }
   );
 }
@@ -65,11 +68,12 @@ test('list links use ISBN, support keyboard navigation, and return to the collec
   await expect(page.getByRole('heading', { name: book.title, exact: true })).toBeVisible();
 });
 
-test('direct URL and reload work without loading the list', async ({ page }) => {
+test('direct URL and reload work without loading collection data', async ({ page }) => {
   let listRequests = 0;
   await mockBooks(page);
   page.on('request', request => {
-    if (new URL(request.url()).pathname === '/books') listRequests++;
+    const url = new URL(request.url());
+    if (url.pathname === '/books' && !url.searchParams.has('editorialRecommendation_like')) listRequests++;
   });
   await page.goto(`${appUrl}/books/${book.isbn}`);
   await expect(page.getByRole('heading', { name: book.title, exact: true })).toBeVisible();
