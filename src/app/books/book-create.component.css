@@ -1,0 +1,37 @@
+:host {
+  display: block;
+}
+
+.book-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.book-field input,
+.book-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: var(--color-surface-raised);
+  padding: 0.75rem 1rem;
+  color: var(--color-ink);
+  font-weight: 400;
+}
+
+.book-field textarea {
+  resize: vertical;
+}
+
+.book-field [aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+button:disabled,
+fieldset:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}

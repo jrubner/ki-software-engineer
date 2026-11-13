@@ -39,12 +39,12 @@ When repository automation analyzes the issue, inspect the available report and 
 
 Follow dependency order. For each approved slice, carry the same requirement, criterion identifiers, issue reference, and current evidence through these phases:
 
-| Phase | Skill | Required handoff |
-| --- | --- | --- |
-| Red | [developer-red](../developer-red/SKILL.md) | Criteria mapped to tests, actual behavioral failures, already-satisfied cases, and blockers. |
-| Green | [developer-green](../developer-green/SKILL.md) | Agreed behavior passes focused tests and applicable regressions/checks; test corrections are explained. |
-| Blue | [developer-blue](../developer-blue/SKILL.md) | Scoped refactoring preserves verified behavior, or a justified no-change result. |
-| Finalisation | [requirements-finalisation](../requirements-finalisation/SKILL.md) | Acceptance matrix, final verification, delivery evidence, and confirmed issue state. |
+| Phase        | Skill                                                              | Required handoff                                                                                        |
+| ------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Red          | [developer-red](../developer-red/SKILL.md)                         | Criteria mapped to tests, actual behavioral failures, already-satisfied cases, and blockers.            |
+| Green        | [developer-green](../developer-green/SKILL.md)                     | Agreed behavior passes focused tests and applicable regressions/checks; test corrections are explained. |
+| Blue         | [developer-blue](../developer-blue/SKILL.md)                       | Scoped refactoring preserves verified behavior, or a justified no-change result.                        |
+| Finalisation | [requirements-finalisation](../requirements-finalisation/SKILL.md) | Acceptance matrix, final verification, delivery evidence, and confirmed issue state.                    |
 
 Return from each phase to this workflow. Their standalone stopping boundaries do not require ending an already authorized overall workflow.
 
@@ -52,6 +52,22 @@ Return from each phase to this workflow. Their standalone stopping boundaries do
 - Compilation errors, broken fixtures, or unavailable runners do not prove behavioral Red. Resolve authorized test defects or report the blocker before dependent Green work. Do not claim a phase passed while required evidence is missing.
 - Keep Blue in this complete workflow, while allowing its justified no-change outcome. Do not create refactoring work merely to satisfy the sequence.
 - If a requirement changes materially, settle the changed contract and update the affected tests before implementing it. Return failed behavior to Green, or incorrect/missing coverage to Red, within the authorized scope.
+
+### Optional parallel slices
+
+Parallelize independent slices only when delegation is authorized and available.
+Keep Red, Green, and Blue sequential within each slice. Before dispatching:
+
+- Identify dependencies and stabilize shared types, service contracts, and integration ownership.
+- Assign exclusive file ownership in the shared working tree; route changes to shared files through the coordinator. Agents must preserve existing work and must not switch branches, reset files, or publish independently.
+- Supply each agent with the complete requirement, criterion identifiers, interfaces, verification limits, and handoff expectations. Pass an explicitly requested model in the spawn call; do not silently substitute another model when it is unavailable.
+- Coordinate test and build execution centrally. Obtain a writing pause from affected agents before evidence-producing runs so partial concurrent edits cannot invalidate results. Missing contracts or compilation errors remain blockers, not behavioral Red evidence.
+
+Require each handoff to state changed files, criterion coverage, actual verification,
+remaining integration work, and whether writing has stopped. The coordinator owns
+shared entry points, integration review, and final acceptance verification. A slice
+being finished does not establish that the integrated feature passes. Existing
+authorization and publication boundaries apply to every agent.
 
 ## Finalise and deliver
 

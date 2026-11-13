@@ -1,6 +1,6 @@
 # BookMonkey Architecture
 
-This summary describes the checked-out source and configuration reviewed on 2026-11-09, including local build checks and a limited browser smoke check. It describes observed implementation, not the team's intended architecture. Update it when routes, providers, dependencies, or feature boundaries change.
+This summary describes the checked-out source and configuration, initially reviewed on 2026-11-09 and updated for feature delivery on 2026-11-13. Dated verification sections retain their historical scope. It describes observed implementation, not the team's intended architecture. Update it when routes, providers, dependencies, or feature boundaries change.
 
 ## Evidence and confidence
 
@@ -13,22 +13,22 @@ The review followed the bootstrap and provider configuration, routes, component 
 
 ## Purpose and scope
 
-BookMonkey is an Angular workshop application that displays a searchable book collection and individual book details. The repository contains the browser frontend; the fake Bookmonkey API is started separately. Both book features are read-only: there are no book editing, authentication, or book persistence flows. The selected color theme is stored locally in the browser. The additional `/gamba` route hosts Book of CK, a client-only slot game using fictional credits; it has no payments or backend persistence.
+BookMonkey is an Angular workshop application with a searchable, paginated book collection, individual details, and forms for creating and editing books. The repository contains the browser frontend; the fake Bookmonkey API is started separately. A personal reading-list board persists locally in the browser; authentication is not implemented. The selected color theme is also stored locally. The additional `/gamba` route hosts Book of CK, a client-only slot game using fictional credits; it has no payments or backend persistence.
 
 ## Technology and dependencies
 
 Versions below are declarations from [package.json](package.json); ranges do not identify an exact installed version. [package-lock.json](package-lock.json) records dependency resolutions.
 
-| Technology             | Declared version                       | Role in this repository                                                                     |
-| ---------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Angular                | Core packages 20.2.1; CLI/build 20.2.0 | Standalone components, routing, dependency injection, HTTP, and template-driven forms       |
-| TypeScript             | 5.9.2                                  | Application types; strict compiler and template checks in [tsconfig.json](tsconfig.json)    |
-| RxJS                   | 7.8.0                                  | Observable HTTP responses consumed through subscriptions                                    |
-| Zone.js                | 0.15.0                                 | Change detection with event coalescing configured in [app.config.ts](src/app/app.config.ts) |
-| Tailwind CSS / PostCSS | 4.1.12 / 8.5.6                         | Utility styling through [styles.css](src/styles.css) and [.postcssrc.json](.postcssrc.json) |
-| Angular Material / CDK | ^20.2.0 / 20.2.0                       | Snackbar helper and snackbar theme overrides; the helper has no application callers         |
-| Prettier               | 3.6.2                                  | Formatting configured in [.prettierrc](.prettierrc)                                         |
-| Playwright             | ^1.55.0                                | Book detail feature tests with controlled API responses, alongside external-site examples   |
+| Technology             | Declared version                       | Role in this repository                                                                        |
+| ---------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Angular                | Core packages 20.2.1; CLI/build 20.2.0 | Standalone components, routing, dependency injection, HTTP, and reactive/template-driven forms |
+| TypeScript             | 5.9.2                                  | Application types; strict compiler and template checks in [tsconfig.json](tsconfig.json)       |
+| RxJS                   | 7.8.0                                  | Observable HTTP responses consumed through subscriptions                                       |
+| Zone.js                | 0.15.0                                 | Change detection with event coalescing configured in [app.config.ts](src/app/app.config.ts)    |
+| Tailwind CSS / PostCSS | 4.1.12 / 8.5.6                         | Utility styling through [styles.css](src/styles.css) and [.postcssrc.json](.postcssrc.json)    |
+| Angular Material / CDK | ^20.2.0 / 20.2.0                       | Reading-list drag and drop; unused snackbar helper and theme overrides                         |
+| Prettier               | 3.6.2                                  | Formatting configured in [.prettierrc](.prettierrc)                                            |
+| Playwright             | ^1.55.0                                | Book detail feature tests with controlled API responses, alongside external-site examples      |
 
 The manifest also declares `@ngrx/signals` 20.0.1, `@angular-architects/ngrx-toolkit` ^20.1.0, and `@tanstack/angular-query-experimental` ^5.85.5. None is imported or configured in the current application source; list state uses Angular signals in [BookListComponent](src/app/books/book-list.component.ts). This was checked against imports throughout `src/` and the providers in [app.config.ts](src/app/app.config.ts).
 
@@ -36,22 +36,26 @@ Likewise, `@angular/ssr`, `@angular/platform-server`, and Express are declared, 
 
 ## Source layout and responsibilities
 
-| Path                                                                                 | Responsibility                                                                                             |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| [src/main.ts](src/main.ts)                                                           | Calls `bootstrapApplication(App, appConfig)` and logs bootstrap failures                                   |
-| [src/app/app.config.ts](src/app/app.config.ts)                                       | Registers router, HTTP client, animations, global browser error listeners, and zone-based change detection |
-| [src/app/app.ts](src/app/app.ts), [app.html](src/app/app.html)                       | Root shell with header, router outlet, and footer                                                          |
-| [src/app/app.routes.ts](src/app/app.routes.ts)                                       | Maps the empty path to the list, `books/:isbn` to details, lazy-loads `/gamba`, and redirects unmatched paths to the list |
-| [src/app/books/book-list.component.ts](src/app/books/book-list.component.ts)         | Loads books, owns search/loading/results state, and renders list and empty states                          |
-| [src/app/books/book-item.component.ts](src/app/books/book-item.component.ts)         | Renders the entire book card as one keyboard-accessible link using the book's ISBN                         |
-| [src/app/books/book-detail.component.ts](src/app/books/book-detail.component.ts)     | Loads route-selected book details and renders loading, success, not-found, and API-error states            |
-| [src/app/books/book-api-client.service.ts](src/app/books/book-api-client.service.ts) | Root-provided HTTP client for the external books endpoint                                                  |
-| [src/app/books/book.ts](src/app/books/book.ts)                                       | Defines the frontend's expected book shape                                                                 |
-| [src/app/shared/toast.service.ts](src/app/shared/toast.service.ts)                   | Root-provided `MatSnackBar` wrapper; currently unused by the book feature                                  |
-| [public/](public/)                                                                   | Static assets copied by the Angular build                                                                  |
-| [tests/](tests/), [tests-examples/](tests-examples/)                                 | BookMonkey feature tests plus Playwright samples; only `tests/` is selected by the current configuration   |
+| Path                                                                                                         | Responsibility                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| [src/main.ts](src/main.ts)                                                                                   | Calls `bootstrapApplication(App, appConfig)` and logs bootstrap failures                                         |
+| [src/app/app.config.ts](src/app/app.config.ts)                                                               | Registers router, HTTP client, animations, global browser error listeners, and zone-based change detection       |
+| [src/app/app.ts](src/app/app.ts), [app.html](src/app/app.html)                                               | Root shell with header, router outlet, and footer                                                                |
+| [src/app/app.routes.ts](src/app/app.routes.ts)                                                               | Lazy-loads collection, creation, editing, details, reading list, and game; redirects unmatched paths to the list |
+| [src/app/books/book-list.component.ts](src/app/books/book-list.component.ts)                                 | Loads books, owns search/loading/results state, and renders list and empty states                                |
+| [src/app/books/book-item.component.ts](src/app/books/book-item.component.ts)                                 | Renders the entire book card as one keyboard-accessible link using the book's ISBN                               |
+| [src/app/books/book-detail.component.ts](src/app/books/book-detail.component.ts)                             | Loads route-selected book details and renders loading, success, not-found, and API-error states                  |
+| [src/app/books/book-edit.component.ts](src/app/books/book-edit.component.ts)                                 | Loads an existing book, owns its typed Reactive Form, validates changes, saves, and handles failures             |
+| [src/app/books/book-create.component.ts](src/app/books/book-create.component.ts)                             | Validates a new book, checks ISBN availability, and saves through the API                                        |
+| [src/app/reading-list/reading-list.store.ts](src/app/reading-list/reading-list.store.ts)                     | Owns reading-list membership, order, storage, and metadata refresh                                               |
+| [src/app/reading-list/reading-list-board.component.ts](src/app/reading-list/reading-list-board.component.ts) | Renders status columns, book covers, counts, and whole-card CDK drag and drop                                    |
+| [src/app/books/book-api-client.service.ts](src/app/books/book-api-client.service.ts)                         | Root-provided HTTP client for the external books endpoint                                                        |
+| [src/app/books/book.ts](src/app/books/book.ts)                                                               | Defines the frontend's expected book shape                                                                       |
+| [src/app/shared/toast.service.ts](src/app/shared/toast.service.ts)                                           | Root-provided `MatSnackBar` wrapper; currently unused by the book feature                                        |
+| [public/](public/)                                                                                           | Static assets copied by the Angular build                                                                        |
+| [tests/](tests/), [tests-examples/](tests-examples/)                                                         | BookMonkey feature tests plus Playwright samples; only `tests/` is selected by the current configuration         |
 
-The structure groups the book feature under `books/` and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. The list and detail components keep their larger views in colocated [book-list.component.html](src/app/books/book-list.component.html) and [book-detail.component.html](src/app/books/book-detail.component.html) files; request/state logic remains in the TypeScript components. The shorter card view remains inline. The [route configuration](src/app/app.routes.ts) lazy-loads the list, detail, and game components through `loadComponent`. The root and book components use `OnPush`; templates use built-in control flow, list/card inputs use signal inputs, and list/cover state uses signals. Detail request state remains an Observable consumed by `AsyncPipe`.
+The structure groups books under `books/`, the local board under `reading-list/`, and reusable helpers under `shared/`. Components are standalone; there is no application NgModule. Substantial views use colocated HTML files; request/state logic remains in TypeScript. The shorter book card remains inline. The [route configuration](src/app/app.routes.ts) lazy-loads the list, detail, edit, create, reading-list board, and game components through `loadComponent`. Components use `OnPush`, built-in control flow, signal inputs, and local signals. Detail request state remains an Observable consumed by `AsyncPipe`.
 
 ## Agent instructions and refactoring review
 
@@ -196,7 +200,7 @@ src/main.ts -> App + appConfig -> RouterOutlet -> BookListComponent
                                                    |
                                   http://localhost:4730/books
                                                    |
-                                           Observable<Book[]>
+                                           Observable<BookPage>
                                                    |
                                   component signals -> BookItemComponent[]
 ```
@@ -204,10 +208,10 @@ src/main.ts -> App + appConfig -> RouterOutlet -> BookListComponent
 The following flow is supported by [BookListComponent](src/app/books/book-list.component.ts), [BookApiClient](src/app/books/book-api-client.service.ts), and [BookItemComponent](src/app/books/book-item.component.ts):
 
 1. `BookListComponent.ngOnInit()` loads books with its `pageSize` input, which defaults to 10.
-2. `BookApiClient.getBooks()` sends `GET http://localhost:4730/books` with `_limit`. When a search term is present, it also sends `q`. The API implementation and its exact search semantics are outside this repository. A local title search was observed to work; the service comment about searching title and author is not proof of the full server-side search contract.
-3. The component subscribes directly, updates the `books` and `loading` signals, and renders with `OnPush`. Each book is passed to a presentation component with a required signal input; `@for` tracks its `id`.
-4. Search uses `FormsModule` and two-way `ngModel` binding. Changes reset a 300 ms timeout before requesting results. Clearing the search immediately reloads the default list.
-5. While loading, the UI shows a spinner. An empty array produces an empty state. Request errors are logged to the console and clear `loading`; there is no dedicated error message or retry control.
+2. `BookApiClient.getBooksPage()` sends `GET http://localhost:4730/books` with `_page`, `_limit`, and optional `q`. It returns `BookPage`, reading `X-Total-Count` as a nonnegative safe integer; missing or invalid totals fail the request. The compatible `getBooks()` method remains available. Exact server search semantics and CORS exposure of the total header require external API verification.
+3. A `switchMap` stream cancels replaced requests. Signals own loading, errors, page, total, and cards; stale cards are cleared during loading. Each card has a required signal input and `@for` tracks its `id`.
+4. Search retains `FormsModule` and `ngModel`. A destruction-owned 300 ms timer applies the search on page one; clearing cancels that timer and immediately resets. Paging retains the applied query.
+5. Previous/Next controls disable at boundaries and while loading. Errors offer retry of the same page/query. A response that makes the current page invalid triggers a corrected request for the last valid page. Zero totals render the empty state.
 
 The [Book interface](src/app/books/book.ts) includes `id`, `isbn`, `title`, optional `subtitle`, `author`, `publisher`, `numPages`, `price`, `cover`, `abstract`, and `userId`. It also models optional `publishedAt?: string` and `coAuthors?: string[]`, based on the locally served API documentation. The HTTP generic expresses a compile-time expectation; no runtime response validation is implemented. A sample response alone does not establish field types or guarantees for all responses.
 
@@ -219,9 +223,177 @@ The entire card in [BookItemComponent](src/app/books/book-item.component.ts) is 
 
 `distinctUntilChanged` avoids duplicate parameter loads, and `switchMap` unsubscribes from the previous HTTP request when the ISBN changes. Each request emits a loading state first, removing previous details. Request-local `catchError` maps HTTP 404 to not-found and other HTTP/network failures to an error state without terminating future parameter changes. The template's `AsyncPipe` owns the subscription and cleans it up when the component is destroyed.
 
-Success renders bibliographic data, optional publication date and nonempty co-authors. Price stays a string as supplied by the API; descriptions use escaped text interpolation. Missing or failed covers use a placeholder, and cover failure state resets for a new ISBN. Every state includes a real router link back to `/`, independent of browser history. The implementation adds no dependencies and leaves the existing list/search lifecycle unchanged.
+Success renders bibliographic data, optional publication date and nonempty co-authors. Price stays a string as supplied by the API; descriptions use escaped text interpolation. Missing or failed covers use a placeholder, and cover failure state resets for a new ISBN. Every state includes a real router link back to `/`, independent of browser history. A responsive action group below the author contains labeled buttons with decorative SVG icons and Material tooltips: native links open the editor and reading board, and a membership button adds or removes the ISBN. Membership is shown through `aria-pressed`, a checkmark, and the label `In reading list`; its tooltip and accessible name explain removal. Tooltip colors, typography, and rounded corners are defined through Material overrides using semantic theme tokens.
 
 ## Build, local services, and styling
+
+### Book editing (2026-11-13)
+
+Source-confirmed: the detail page links to `/books/:isbn/edit`. The lazy editor
+loads independently through `getBookByIsbn()`, uses typed Reactive Forms and
+`OnPush`, and retains ISBN, `id`, and `userId` in the outgoing book. Replaceable
+reads use `switchMap`; route changes reset form/error state and cancel stale
+reads. Destruction owns both read and write subscriptions. A late write response
+for a different route cannot navigate or alter the new editor state.
+
+Titles/authors must contain non-whitespace text, and pages must be a positive
+integer. Other fields may be empty; price remains free text. Co-authors are
+trimmed nonempty lines. Empty publication dates are omitted from the full PUT
+replacement so the optional property is deleted. The form and its navigation
+actions are disabled while saving; a synchronous guard prevents duplicate
+submissions. Success navigates to a freshly loaded detail page. Failure keeps
+inputs, re-enables the form, and offers retry. Cancel navigates without writing.
+Descriptions remain escaped text.
+
+The installed Bookmonkey API 3.3.0 was read locally before implementation; its
+README documents `PUT /books/:isbn`. Its validation middleware accepts optional
+ISO-8601 dates but rejects an empty date string, and overwrites `id` with ISBN.
+The frontend sends the unchanged original identity; preservation of a distinct
+`id` by that server is therefore outside the frontend's control. Existing sampled
+API records have equal values. No real API write was made during verification.
+
+Verification applies to the uncommitted work on
+`feature/workshop-feature-delivery`, based on `4506063`:
+
+- `node node_modules/@angular/cli/bin/ng.js test --watch=false --browsers=ChromeHeadless`
+  passed 21 tests (13 editor, six HTTP contracts, two existing list tests).
+- Development and production builds passed. Production initial bundle: 382.87 kB;
+  lazy editor: 8.67 kB. The existing game CSS warning remains 7.78 kB against a
+  4 kB warning threshold, below the unchanged 8 kB error budget.
+- Before implementation, the Playwright feature run stopped after two expected
+  failures: the loaded detail page had no Edit book link, and the edit URL had
+  no form. The initial HTTP tests could not compile because `updateBook` did not
+  exist; this was a missing contract, not a behavioral Red result.
+- The user subsequently reserved UI browser validation for themselves. The 16
+  prepared editor scenarios and existing detail/theme/shell regressions were not
+  run against the completed feature. Direct/reload routing, keyboard use, themes,
+  and mobile appearance remain unverified in a live browser for this change.
+  No screenshots were taken. Existing services were reused; the session exposed
+  no VS Code Debug MCP tools. The already connected personal browser was retained;
+  test-runner browsers closed when their runs ended.
+
+| Criterion               | Implementation and unit evidence                                                                        | Remaining evidence                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| AC1: open and prefill   | Lazy route, detail link, independent ISBN load and prefill unit test                                    | Live navigation and reload                     |
+| AC2: save once and lock | Complete PUT/encoded ISBN contracts, duplicate submission/disabled controls and optional deletion tests | End-to-end detail refresh and real persistence |
+| AC3: invalid fields     | Blank/whitespace title and author plus empty, zero, negative and fractional pages tested without writes | User browser review                            |
+| AC4: cancel             | Navigation to original ISBN with no write tested                                                        | User browser review                            |
+| AC5: failures           | 404/500/network recovery, stale-read cancellation and save retry unit tests                             | User browser review                            |
+
+Under the user's amended completion condition, local implementation and review
+complete the checklist; browser acceptance is reserved for the user and is not claimed.
+No GitHub issue, commit, push, or pull request was created.
+
+### Creation, pagination, and reading list (2026-11-13)
+
+Source-confirmed: `/books/new` precedes the ISBN routes and lazy-loads an independent
+typed Reactive Form. Required trimmed ISBN/title/author and positive integer pages
+are validated locally; there is no ISBN checksum validation. Optional values may
+be empty, price stays free text, and co-authors are normalized lines. Creation
+uses `NewBook = Omit<Book, 'id'>`, omits an empty publication date, and sets the
+workshop default `userId: 1`. Only a 404 from the preceding ISBN lookup permits
+POST `/books`; other lookup errors and duplicate ISBNs prevent it. Save/lookup
+errors retain input, a synchronous guard prevents duplicate submission, and
+success navigates using the returned ISBN. Real POST persistence is unverified.
+
+`/reading-list` lazy-loads a CDK board linked from the main navigation. The root
+store adds once by ISBN, preserves status and order, and stores version 1 entries
+under `reading-list:v1` with last-known book metadata. Drag and drop supports
+column changes and sorting using the entire card. Following the user's UI
+revision, there are no status selectors or separate drag handles. Book covers,
+author/title metadata, column counts, and highlighted drop targets define the
+board presentation; the title remains a details link. Opening the board refreshes each ISBN independently.
+Refresh responses replace only book metadata, preserving moves made while reads
+are pending. Failed reads, including 404, retain entries and offer Retry. Invalid
+or unavailable local storage produces a notice and leaves in-memory use available.
+The detail membership button also removes entries, persists the result, normalizes
+remaining column orders, and cancels any pending refresh for that ISBN. Adding it
+again starts in Want to read. There is no cross-tab synchronization, authentication,
+or backend write for reading-list changes. Existing Angular CDK is reused without new dependencies.
+
+#### Local acceptance evidence
+
+The uncommitted working tree on `feature/workshop-feature-delivery` includes the
+preserved editor and the three parallel slices implemented with `gpt-6-luna`.
+The following outcomes are met within deterministic Angular unit tests and source
+review; real API persistence and the user's browser acceptance remain unverified.
+
+| Criteria | Implementation                                             | Verification evidence                                                                                                                  |
+| -------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| C1       | Collection link and ordered lazy creation route            | List and router-harness tests cover entry, direct resolution, and recreation after navigation; actual browser reload is unverified.    |
+| C2       | Independent typed creation form                            | Creation tests cover required whitespace, positive whole pages, optional data, free-text price, and co-author normalization.           |
+| C3       | Guarded GET-then-POST and returned-ISBN navigation         | Creation/HTTP tests cover a single POST, disabled actions, payload without `id`, and success navigation.                               |
+| C4       | Duplicate field error and recoverable lookup/save failures | Creation tests cover existing ISBN, non-404 lookup errors, POST conflict, retained inputs, and retry.                                  |
+| C5       | Cancel returns to the collection                           | Creation test asserts navigation with no write.                                                                                        |
+| P1       | Counts, page controls, input page size, and empty state    | List and HTTP tests cover defaults, nondefault size, totals, boundaries, and zero results.                                             |
+| P2       | Debounced search and immediate clear reset page one        | List tests cover 300 ms timing, retained applied search on paging, and pending-timer cancellation.                                     |
+| P3       | Replaceable reads clear cards and disable paging           | List tests cover cancellation, stale-card hiding, loading controls, and destruction cleanup.                                           |
+| P4       | Same-request retry and corrected last page                 | List tests cover page/query retry and shrinking totals; HTTP tests reject missing/invalid total headers.                               |
+| K1       | Detail action and ISBN-based idempotent add                | Router/store tests use distinct ID/ISBN and preserve existing status/order on duplicate add.                                           |
+| K2       | Lazy route, main navigation, three columns                 | Router/board tests cover resolution and columns; navigation reviewed in source.                                                        |
+| K3       | Whole-card CDK moves/sorting (amended by user)             | Board/store tests cover whole-card drag binding, no status controls, drop handlers, and ordering; real pointer dragging is unverified. |
+| K4       | Versioned local storage with cached metadata               | Store tests persist and restore membership, status, order, and metadata in the test browser.                                           |
+| K5       | Per-ISBN refresh updates metadata only                     | Board/store tests cover opening refresh, superseded reads, and moves during pending reads.                                             |
+| K6       | Retained entries, Retry, and storage notice                | Store/board tests cover 404 recovery, corrupt data, and throwing storage reads/writes.                                                 |
+
+The shared transport and integration review retained separate creation/edit forms
+and store/view responsibilities. Blue removed duplicate page-state assignments
+and a duplicate test type; no further abstraction was justified. Early missing
+API/component symbols were compilation blockers, not behavioral Red evidence.
+The navigation Red run demonstrated the missing creation route and detail action.
+Two initial pagination failures were test scheduling/fixture defects, corrected
+without weakening their assertions. See the final verification below.
+
+Final verification after Blue on 2026-11-13:
+
+- `node node_modules/@angular/cli/bin/ng.js test --watch=false --browsers=ChromeHeadless`:
+  all 71 tests passed, including the preserved editing feature. ChromeHeadless
+  required execution outside the sandbox and exited with the test runner.
+- `node node_modules/@angular/cli/bin/ng.js build --configuration development`:
+  passed with separate lazy creation and reading-list chunks.
+- `npm.cmd run build`: passed with network access for existing Google Fonts
+  after sandbox DNS resolution failed. Production initial bundle: 389.11 kB.
+  The unchanged game stylesheet still warns at 7.78 kB against its 4 kB warning
+  budget, below the 8 kB error limit.
+- Targeted Prettier and `git diff --check` passed. Final review included new
+  files and retained the prior editing changes. No application service was
+  started, stopped, or restarted; no Playwright or interactive browser checks,
+  screenshots, real POSTs, issues, commits, pushes, or PRs were performed.
+- The workflow Skill passed YAML syntax, current scalar frontmatter, naming,
+  description, placeholder, and all six local-link checks using Node/Prettier.
+  The bundled Python `quick_validate.py` could not start because PyYAML is not
+  installed; the stated checks are the alternative validation, not a claimed
+  successful run of that script. Existing permission and phase gates remain.
+
+The workshop checklist records local completion, leaving the external classroom
+action open. There is no associated issue to update or close. Manual browser
+acceptance, production SPA fallback, total-header CORS exposure, and real API
+write persistence remain outside this verification.
+
+#### Reading-list presentation revision (2026-11-13)
+
+The user amended K3 to whole-card drag and drop only, removing the native status
+selector and separate drag handle. The board now has cover thumbnails with an
+initial fallback, author/title/page metadata, column counts, empty drop areas,
+and CDK preview, placeholder, and receiving styles. Theme tokens and responsive
+columns remain in use. Images and title links disable native dragging so CDK
+owns the card gesture; normal title-link activation still opens details. Touch
+dragging has a brief hold delay. Persistence and refresh ownership are unchanged.
+
+After this revision, all 73 Angular unit tests and both builds passed. Board
+tests cover whole-card CDK binding without controls/handles, cross-column moves,
+persisted status, sorting, and broken-cover fallback. Production initial bundle:
+388.74 kB; only the existing game stylesheet budget warning remains. Targeted
+Prettier and `git diff --check` passed. Interactive drag appearance and gestures
+remain for user browser acceptance; no Playwright or screenshots were used.
+
+Drag empty-state correction (2026-11-13): a drop zone hides its empty-state
+message whenever it contains the CDK drag placeholder. Leaving the zone restores
+the message automatically, without changing stored membership during hovering.
+The regression test failed on the visible message before the CSS fix, then all
+74 unit tests and both builds passed. It also verifies that other empty columns
+remain visible and the placeholder retains its reduced opacity. Interactive
+browser verification remains with the user.
 
 ### Scrolling shell (2026-11-09)
 
@@ -344,6 +516,12 @@ The first automated run could not launch because Playwright's matching Chromium 
 - **Coverage boundaries:** Firefox/WebKit, malformed API responses, and real server data containing nonempty co-authors were not tested. HTTP 500, network failure, timing, and optional-field combinations were controlled test inputs; the manual offline check was a browser simulation.
 - **Maintainer questions:** Why are the unused state/query/SSR packages present? Is client-only rendering intentional? What deployment topology, API contract, and test coverage are expected? Confirm these before treating current implementation as an architectural decision.
 
+The three onboarding findings above about missing unit infrastructure, list
+request sequencing, and list error rendering are historical. The authorized
+unit-runner repair and 2026-11-13 pagination delivery supersede them: the runner
+works, reads cancel, timers have cleanup, and failures show an explicit retry
+state. External contract and browser coverage limitations still apply.
+
 ## Reflection: using AI for project onboarding
 
 An AI summary can speed up navigation and make component relationships easier to find, but it needs review against source evidence:
@@ -363,7 +541,6 @@ When changing architecture, review this document in the same change as the imple
 Run relevant builds and application-specific tests when behavior changes, and record commands, outcomes, and limits. External-site sample tests cannot substitute for BookMonkey coverage. Review architectural intent and unresolved contract questions with a maintainer; do not fill gaps with assumptions. This document has no automated synchronization or assigned maintenance owner.
 
 Before future AI-assisted reviews, confirm the approved service and repository scope with the team, exclude credentials and sensitive data, and share only the necessary material. No organization-specific approval policy or data-handling compliance was verified by this technical review.
-
 
 ## Book of CK (2026-11-10)
 

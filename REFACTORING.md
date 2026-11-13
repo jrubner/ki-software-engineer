@@ -1,5 +1,63 @@
 # Refactoring review
 
+## Creation, pagination, and reading list review (2026-11-13)
+
+Scope: the authorized tasks 2–4 and their shared transport/navigation, preserving
+the existing editor. Green passed all 71 Angular unit tests before Blue.
+
+- Pagination initiation and its callers repeated page-signal assignments in
+  `book-list.component.ts`; request initiation now owns that update. List tests
+  reuse the public `BookPage` contract instead of a duplicate shape.
+- Creation keeps form/payload orchestration separate from HTTP transport, with
+  explicit lookup and save recovery. The independent create/edit forms are an
+  intentional scope choice; no shared form abstraction is needed for delivery.
+- The reading-list store owns persistence and per-ISBN refresh, while the board
+  owns rendering and interactions. Refresh changes metadata without replacing
+  status/order, cancels superseded reads, and cleans up on destruction.
+- No additional component split, storage abstraction, or unrelated refactor is
+  justified. The coordinator reviewed routes, navigation, detail actions, shared
+  types, and transport without finding another maintenance issue in scope.
+
+The historical list ordering/timer findings below are resolved by the explicitly
+authorized pagination task: `switchMap` and destruction cleanup now own the
+request lifecycle, with tests for replacement, clear, and destruction. They were
+not silently included in the earlier behavior-preserving refactor.
+
+The workflow Skill now documents optional authorized parallel slices, explicit
+model choice, exclusive file ownership, stable contracts, central verification,
+and handoffs. It retains phase and publication boundaries. Final verification
+after Blue is recorded in `ARCHITECTURE.md`; user browser acceptance is excluded
+from the commissioned automated checks.
+
+## Book editing review (2026-11-13)
+
+The user authorized the Red/Green/Blue feature plan for task 1. This review is
+limited to the new editor, its route/detail entry point, and update transport.
+All 21 Angular unit tests and both builds pass. The user reserved UI browser
+validation for themselves, so a full browser Green baseline is not claimed.
+
+No concrete maintenance issue requiring a refactor was found in this scope:
+
+- `book-edit.component.ts` owns form/view orchestration, while
+  `BookApiClient.updateBook()` owns HTTP transport. The substantial template and
+  small feature stylesheet are colocated; no reusable child boundary is needed.
+- `fillForm()` separates API-to-form conversion from route loading. Typed
+  controls and focused validators keep input rules explicit. Semantic tokens
+  reuse the existing light/dark palettes and focus styling.
+- Replaceable reads use `switchMap` with request-local errors. Writes use a
+  guarded subscription rather than a replaceable read pipeline. Both have
+  destruction cleanup, and late write callbacks check route state ownership.
+- API-specific omission of a cleared publication date is intentional: full PUT
+  removes the property, while the installed API rejects an empty date string.
+  The server's forced `id = isbn` is an external compatibility limitation,
+  documented in `ARCHITECTURE.md`, not a reason to alter frontend identity.
+
+Disposition: retain the implementation without additional abstractions or
+unrelated refactoring. The existing deferred list/search findings remain outside
+scope. Skill review found no concrete instruction defect requiring changes;
+the supplied plan already permits local work without an issue, a no-change Blue
+result, and honest reporting of unverified checks.
+
 ## Authorization and baseline
 
 The user explicitly requested implementation of the agreed workshop refactoring plan in chat on 2026-11-09. Loading `AGENTS.md` alone does not trigger this workflow. The reviewed baseline is commit `2ce2442`; the working tree was clean before this change. Review context: `ARCHITECTURE.md`, the book components and API client, theme bootstrap/service, and the existing Playwright suite.
@@ -53,13 +111,13 @@ server (20.2.0) successfully answered `initialize`, `tools/list`, `list_projects
 and `get_best_practices`. Its guidance is applied to the existing Angular 20 app;
 no framework upgrade, dependency migration, or product redesign is required.
 
-| Source-confirmed finding | Target and scope | Verification |
-| --- | --- | --- |
-| List, detail, and card templates use structural directives and broad `CommonModule` imports. | Use built-in control flow, preserve DOM elements and track books by `id`, and import only required pipes/directives. | Existing detail, keyboard, empty/loading, shell, and theme browser cases; both builds. |
-| List/card inputs use decorators; list rendering depends on mutable fields and default change detection. | Use signal inputs, signal-backed local state, and `OnPush` for all components; preserve page-size defaults, request timing, and view states. | HTTP unit contracts and application browser suite, including asynchronous detail/cover updates. |
-| Services and book components use constructor parameter injection. | Prefer `inject()` while retaining the existing detail Observable composition and lifecycle ownership. | HTTP unit tests and route/error recovery browser cases. |
-| Both feature routes are imported eagerly. | Load standalone list/detail components lazily without changing URLs or route order. | Direct URL, reload, wildcard, back, and parameter-change browser cases; production chunk output. |
-| Redundant `standalone: true`, explicit inferable types, one `any` timer, and a stale card comment obscure current conventions. | Remove redundant declarations/comment and type the existing timer; preserve the separately deferred search lifecycle behavior. | Strict compilation, formatting, and final diff review. |
+| Source-confirmed finding                                                                                                       | Target and scope                                                                                                                             | Verification                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| List, detail, and card templates use structural directives and broad `CommonModule` imports.                                   | Use built-in control flow, preserve DOM elements and track books by `id`, and import only required pipes/directives.                         | Existing detail, keyboard, empty/loading, shell, and theme browser cases; both builds.           |
+| List/card inputs use decorators; list rendering depends on mutable fields and default change detection.                        | Use signal inputs, signal-backed local state, and `OnPush` for all components; preserve page-size defaults, request timing, and view states. | HTTP unit contracts and application browser suite, including asynchronous detail/cover updates.  |
+| Services and book components use constructor parameter injection.                                                              | Prefer `inject()` while retaining the existing detail Observable composition and lifecycle ownership.                                        | HTTP unit tests and route/error recovery browser cases.                                          |
+| Both feature routes are imported eagerly.                                                                                      | Load standalone list/detail components lazily without changing URLs or route order.                                                          | Direct URL, reload, wildcard, back, and parameter-change browser cases; production chunk output. |
+| Redundant `standalone: true`, explicit inferable types, one `any` timer, and a stale card comment obscure current conventions. | Remove redundant declarations/comment and type the existing timer; preserve the separately deferred search lifecycle behavior.               | Strict compilation, formatting, and final diff review.                                           |
 
 Already compliant: standalone architecture, strict checking, host bindings,
 root-provided services, signal-based theme state, listener cleanup, escaped book

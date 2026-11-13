@@ -13,3 +13,10 @@ export interface Book {
   publishedAt?: string;
   coAuthors?: string[];
 }
+
+export type NewBook = Omit<Book, 'id'>;
+
+export interface BookPage {
+  books: Book[];
+  totalCount: number;
+}
