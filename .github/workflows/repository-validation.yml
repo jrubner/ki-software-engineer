@@ -39,6 +39,14 @@ jobs:
           node node_modules/@angular/cli/bin/ng.js build --configuration development
           npm run build
       - name: Run application browser tests
-        run: node .github/scripts/issue-implementation.cjs test
+        run: npm run test:e2e
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Check whitespace
         run: git diff --check

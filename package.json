@@ -7,6 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:e2e": "node .github/scripts/issue-implementation.cjs test",
+    "test:e2e:headed": "node .github/scripts/issue-implementation.cjs test --headed",
     "format.write": "prettier --write \"src/**/*.{ts,html,md,css,json}\""
   },
   "private": true,

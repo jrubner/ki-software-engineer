@@ -30,6 +30,27 @@ access. The suite includes real-browser CSS and CDK assertions. It does not run
 the separate Playwright application acceptance suite. Spies are restored between
 tests and automatic failure screenshots are disabled in `vitest-base.config.ts`.
 
+Run `npm run test:e2e` for all application acceptance specs in Chromium with one
+worker, excluding the external Playwright website sample. Install the browser
+once with `node node_modules/@playwright/test/cli.js install chromium`.
+Run `npm run test:e2e:headed` to watch the browser, or pass Playwright options
+after npm's separator: `npm run test:e2e -- --headed`.
+Using `npm run test:e2e --headed` without the separator passes the option to npm
+instead of Playwright. The full Chromium installation is required for headed
+runs; a headless-shell-only installation is insufficient.
+The tests mock the API; a running Bookmonkey API is not required. Playwright
+reuses a local frontend at http://localhost:4200 or starts and stops its own
+development server when none is available. Check the service state first.
+The command writes a console summary and an HTML report to `playwright-report/`
+without opening a browser. View it with
+`node node_modules/@playwright/test/cli.js show-report`. Repository validation
+uploads the report on success or failure and retains it for seven days.
+Screenshots remain disabled; traces are collected on the first retry.
+Game outcome tests accelerate native animations where timing is irrelevant;
+dedicated motion tests keep real animation timing. Pure slot calculations live
+in the Angular unit suite rather than being duplicated as Playwright tests.
+See [tests/AGENTS.md](tests/AGENTS.md) for acceptance-test conventions.
+
 Run `node --test .github/scripts/*.test.cjs` for automation guards,
 `npm run ng -- build --configuration development` for the development build,
 and `npm run build` for production. The production build downloads Google Fonts.

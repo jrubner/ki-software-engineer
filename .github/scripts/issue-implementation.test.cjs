@@ -10,7 +10,8 @@ const {
   prepare,
   applyResult,
   publish,
-  applicationTests
+  applicationTests,
+  runApplicationTests
 } = require('./issue-implementation.cjs');
 
 const implemented = JSON.stringify({
@@ -326,6 +327,40 @@ test('discovers new nested application specs and excludes the unrelated website 
       'tests/theme.spec.ts'
     ]);
   } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('forwards Playwright arguments and avoids conflicting color settings', () => {
+  const root = mkdtempSync(join(tmpdir(), 'issue-test-runner-'));
+  const previousNoColor = process.env.NO_COLOR;
+  try {
+    mkdirSync(join(root, 'tests'), { recursive: true });
+    mkdirSync(join(root, 'node_modules/@playwright/test'), { recursive: true });
+    writeFileSync(join(root, 'tests/books.spec.ts'), '');
+    writeFileSync(
+      join(root, 'node_modules/@playwright/test/cli.js'),
+      `require('node:fs').writeFileSync('invocation.json', JSON.stringify({
+        args: process.argv.slice(2), noColor: process.env.NO_COLOR, forceColor: process.env.FORCE_COLOR
+      }));`
+    );
+    process.env.NO_COLOR = '1';
+    runApplicationTests(root, ['--headed', '--grep', 'book collection']);
+    assert.deepEqual(JSON.parse(readFileSync(join(root, 'invocation.json'), 'utf8')), {
+      args: [
+        'test',
+        'tests/books.spec.ts',
+        '--project=chromium',
+        '--workers=1',
+        '--headed',
+        '--grep',
+        'book collection'
+      ],
+      forceColor: '0'
+    });
+  } finally {
+    if (previousNoColor === undefined) delete process.env.NO_COLOR;
+    else process.env.NO_COLOR = previousNoColor;
     rmSync(root, { recursive: true, force: true });
   }
 });

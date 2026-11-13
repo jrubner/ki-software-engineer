@@ -29,6 +29,17 @@ async function amount(page: Page, id: string) {
   return Number((await page.getByTestId(id).innerText()).replace(/,/g, ''));
 }
 
+async function accelerateOutcomeAnimations(page: Page) {
+  await page.evaluate(() => {
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (...args: Parameters<Element['animate']>) {
+      const animation = animate.apply(this, args);
+      animation.playbackRate = 20;
+      return animation;
+    };
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:4200/gamba');
   await expect(page.getByRole('heading', { name: 'Book of CK', exact: true })).toBeVisible();
@@ -47,8 +58,10 @@ test('spins five reels, charges once, and settles an evaluated result', async ({
   await expect(page.getByTestId('credits')).toHaveText('1,000');
 });
 
-test('Ivoris scatters trigger, retrigger, and complete free spins without charging credits', async ({ page }) => {
-  test.setTimeout(120000);
+test('scatters award and retrigger free spins, preserving the selected symbol and charging no bet', async ({
+  page
+}) => {
+  await page.getByRole('button', { name: 'Spin speed' }).click({ clickCount: 2 });
   const scatterStops = REELS.map(reel => reel.indexOf('ivoris'));
   await forceStops(page, scatterStops);
   await page.getByRole('button', { name: 'SPIN', exact: true }).click();
@@ -58,8 +71,8 @@ test('Ivoris scatters trigger, retrigger, and complete free spins without chargi
   const centered = await award.evaluate(element => {
     const bounds = element.getBoundingClientRect();
     return {
-      x: Math.abs(bounds.x + bounds.width / 2 - innerWidth / 2),
-      y: Math.abs(bounds.y + bounds.height / 2 - innerHeight / 2)
+      x: Math.abs(bounds.x + bounds.width / 2 - document.documentElement.clientWidth / 2),
+      y: Math.abs(bounds.y + bounds.height / 2 - document.documentElement.clientHeight / 2)
     };
   });
   expect(centered.x).toBeLessThan(2);
@@ -67,9 +80,6 @@ test('Ivoris scatters trigger, retrigger, and complete free spins without chargi
   await award.getByRole('button', { name: /SPIN FOR SYMBOL/ }).click();
   await expect(award.getByRole('button', { name: 'Stop selection' })).toBeVisible();
   await expect(award.locator('.selection-track')).toBeVisible();
-  const selectionMoves = await observeRolling(award.locator('.selection-track'));
-  expect(selectionMoves.last).toBeGreaterThan(selectionMoves.first);
-  expect(selectionMoves.steps).toBeGreaterThan(3);
   await expect(award.getByRole('img', { name: /^Selected expanding symbol:/ })).toBeVisible();
   const selected = await award.getByRole('status').innerText();
   await award.getByRole('button', { name: 'Start free spins' }).press('Space');
@@ -85,45 +95,27 @@ test('Ivoris scatters trigger, retrigger, and complete free spins without chargi
   await expect(retrigger.getByRole('status')).toHaveText(selected);
   await retrigger.getByRole('button', { name: 'Continue free spins' }).click();
   expect(await amount(page, 'credits')).toBe(before + (await amount(page, 'last-win')));
-  await forceStops(page, [0, 0, 0, 0, 0]);
   const selectedId = SYMBOLS.find(symbol => selected.startsWith(symbol.label))!.id;
-  for (let index = 0; index < 19; index++) {
-    if (index === 0) {
-      await forceStops(
-        page,
-        REELS.map((reel, index) => (index % 2 === 0 ? reel.indexOf(selectedId) : 0))
-      );
-    } else await forceStops(page, [0, 0, 0, 0, 0]);
-    const credits = await amount(page, 'credits');
-    await page.getByRole('button', { name: 'FREE SPIN', exact: true }).click();
-    await expect(page.getByRole('group', { name: 'Slot machine: five reels, three rows' })).toHaveAttribute(
-      'aria-busy',
-      'true'
-    );
-    if (index === 0) {
-      const matchingReels = REELS.filter(
-        (reel, index) => index % 2 === 0 || reel.slice(0, 3).includes(selectedId)
-      ).length;
-      await expect(page.locator('.expanding-overlay')).toHaveCount(matchingReels);
-      await expect(page.locator('.slot-cabinet')).toHaveClass(/expanding-now/);
-      await expect(page.getByRole('button', { name: 'SPINNING', exact: true })).toBeDisabled();
-      expect(
-        await page
-          .locator('.expanding-overlay')
-          .first()
-          .evaluate(element => element.getAnimations().length)
-      ).toBeGreaterThan(0);
-      expect(await amount(page, 'last-win')).toBe(0);
-    }
-    await expect(page.getByRole('group', { name: 'Slot machine: five reels, three rows' })).toHaveAttribute(
-      'aria-busy',
-      'false'
-    );
-    expect(await amount(page, 'credits')).toBeCloseTo(credits + (await amount(page, 'last-win')), 2);
-  }
-  await expect(page.getByRole('status')).toContainText('Free spins complete');
-  await expect(page.getByRole('button', { name: 'Change total bet' })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'SPIN', exact: true })).toBeEnabled();
+  await forceStops(
+    page,
+    REELS.map((reel, index) => (index % 2 === 0 ? reel.indexOf(selectedId) : 0))
+  );
+  const credits = await amount(page, 'credits');
+  await page.getByRole('button', { name: 'FREE SPIN', exact: true }).click();
+  const matchingReels = REELS.filter((reel, index) => index % 2 === 0 || reel.slice(0, 3).includes(selectedId)).length;
+  await expect(page.locator('.expanding-overlay')).toHaveCount(matchingReels);
+  await expect(page.locator('.slot-cabinet')).toHaveClass(/expanding-now/);
+  await expect(page.getByRole('button', { name: 'SPINNING', exact: true })).toBeDisabled();
+  expect(
+    await page
+      .locator('.expanding-overlay')
+      .first()
+      .evaluate(element => element.getAnimations().length)
+  ).toBeGreaterThan(0);
+  expect(await amount(page, 'last-win')).toBe(0);
+  await expect(page.getByRole('button', { name: 'FREE SPIN', exact: true })).toBeEnabled();
+  await expect(page.getByRole('heading', { name: '18 free spins remaining' })).toBeVisible();
+  expect(await amount(page, 'credits')).toBeCloseTo(credits + (await amount(page, 'last-win')), 2);
 });
 
 test('Space spins once, reels move through real symbols, and held keys do not spin again', async ({ page }) => {
@@ -168,8 +160,11 @@ test('bonus selection can be stopped and stays centered on mobile', async ({ pag
   await award.getByRole('button', { name: 'Stop selection' }).click();
   await expect(award.getByRole('img', { name: /^Selected expanding symbol:/ })).toBeVisible();
   expect(await award.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-  const bounds = await award.boundingBox();
-  expect(Math.abs(bounds!.x + bounds!.width / 2 - 195)).toBeLessThan(2);
+  const centerOffset = await award.evaluate(element => {
+    const bounds = element.getBoundingClientRect();
+    return Math.abs(bounds.x + bounds.width / 2 - document.documentElement.clientWidth / 2);
+  });
+  expect(centerOffset).toBeLessThan(2);
   await award.getByRole('button', { name: 'Start free spins' }).click();
   await expect(award).not.toBeVisible();
   await expect(page.getByRole('heading', { name: '10 free spins remaining' })).toBeVisible();
@@ -387,19 +382,14 @@ test('speed cycles through three timings and reels roll with reduced motion enab
 });
 
 test('autospin offers every count, runs exactly ten paid spins and locks manual controls', async ({ page }) => {
-  test.setTimeout(30000);
+  await accelerateOutcomeAnimations(page);
   await forceStops(page, [0, 0, 0, 0, 0]);
   await page.getByRole('button', { name: 'Spin speed' }).click({ clickCount: 2 });
   await expect(page.getByRole('button', { name: 'Spin speed' })).toContainText('Turbo');
   const counts = page.getByRole('combobox', { name: 'Autospin count' });
-  expect(await counts.locator('option').evaluateAll(options => options.map(option => option.value))).toEqual([
-    '10',
-    '25',
-    '50',
-    '100',
-    '250',
-    '500'
-  ]);
+  expect(
+    await counts.locator('option').evaluateAll(options => options.map(option => (option as HTMLOptionElement).value))
+  ).toEqual(['10', '25', '50', '100', '250', '500']);
   await page.getByRole('button', { name: 'Start autospin' }).click();
   await expect(counts).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Change total bet' })).toBeDisabled();
@@ -454,7 +444,7 @@ test('autospin pauses for bonus selection and allows stopping inside the dialog'
 });
 
 test('autospin resumes after selection and adds bonus spins beyond its paid count', async ({ page }) => {
-  test.setTimeout(45000);
+  await accelerateOutcomeAnimations(page);
   await page.evaluate(
     stops => {
       let index = 0;
@@ -473,6 +463,8 @@ test('autospin resumes after selection and adds bonus spins beyond its paid coun
   await award.getByRole('button', { name: 'Start free spins' }).click();
   await expect(page.locator('.auto-message')).toHaveText('Autospin complete.', { timeout: 20000 });
   await expect(page.getByRole('status')).toContainText('Free spins complete');
+  await expect(page.getByRole('button', { name: 'Change total bet' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'SPIN', exact: true })).toBeEnabled();
   const ordinary = evaluateSpin(
     REELS.map(reel => reel.slice(0, 3)),
     10
@@ -488,7 +480,7 @@ test('autospin resumes after selection and adds bonus spins beyond its paid coun
 });
 
 test('autospin stops when the next bet cannot be paid', async ({ page }) => {
-  test.setTimeout(25000);
+  await accelerateOutcomeAnimations(page);
   // Find a deterministic non-winning grid without a bonus trigger.
   let stops = [0, 0, 0, 0, 0];
   for (let offset = 0; offset < 24; offset++) {

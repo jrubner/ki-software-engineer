@@ -35,7 +35,7 @@ Reading this file does not start a refactoring review or authorize code changes.
 - Reuse an existing suitable development server. Check service state before starting or stopping anything; never stop an unrelated service.
 - Development build: `node node_modules/@angular/cli/bin/ng.js build --configuration development`.
 - Production build: `npm.cmd run build` on Windows. The existing Google Fonts integration requires network access; distinguish network failures from code failures.
-- Application regression suite: `node node_modules/@playwright/test/cli.js test tests/book-detail.spec.ts tests/theme.spec.ts tests/shell.spec.ts --project=chromium --workers=1 --reporter=line`.
+- Application regression suite: `npm run test:e2e` (`npm.cmd run test:e2e` on Windows). This discovers all application specs under `tests/`, excludes the external website example, and runs Chromium with one worker. Follow `tests/AGENTS.md` when adding or changing acceptance tests.
 - The Playwright website samples do not verify BookMonkey. The historical Karma failure is documented in `ARCHITECTURE.md`; do not repair that infrastructure without an explicit task.
 - Inspect the final diff and run `git diff --check`. Do not claim successful tests when execution was blocked. Update architectural facts alongside code changes and preserve dated historical evidence.
 - Do not create screenshots unless requested or needed by an explicitly agreed workflow. Commit and push only when requested.

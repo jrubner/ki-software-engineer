@@ -21,6 +21,10 @@ const book = {
 async function setup(page: Page) {
   let current = { ...book };
   const writes: (typeof book)[] = [];
+  await page.route(
+    url => url.origin === 'http://localhost:4730' && url.searchParams.has('editorialRecommendation_like'),
+    route => route.fulfill({ json: [] })
+  );
   await page.route(`${apiUrl}/**`, async route => {
     if (route.request().method() === 'PUT') {
       current = route.request().postDataJSON();
@@ -35,7 +39,8 @@ test('AC1: opens the prefilled editor by keyboard, directly and after reload wit
   await setup(page);
   let lists = 0;
   page.on('request', request => {
-    if (new URL(request.url()).pathname === '/books') lists++;
+    const url = new URL(request.url());
+    if (url.pathname === '/books' && !url.searchParams.has('editorialRecommendation_like')) lists++;
   });
   await page.goto(`${appUrl}/books/${book.isbn}`);
   const edit = page.getByRole('link', { name: 'Edit book', exact: true });
