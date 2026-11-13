@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -27,7 +28,7 @@ describe('BookEditComponent', () => {
   let fixture: ComponentFixture<BookEditComponent>;
   let http: HttpTestingController;
   let params: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
-  let navigate: jasmine.Spy;
+  let navigate: Mock;
   let element: HTMLElement;
 
   beforeEach(() => {
@@ -41,7 +42,7 @@ describe('BookEditComponent', () => {
         { provide: ActivatedRoute, useValue: { paramMap: params.asObservable() } }
       ]
     });
-    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(BookEditComponent);
     element = fixture.nativeElement;
@@ -78,6 +79,16 @@ describe('BookEditComponent', () => {
     http.expectNone(`${apiUrl}?_limit=10`);
   });
 
+  it('shows required validation after a real input is blurred', async () => {
+    load();
+    const title = element.querySelector<HTMLInputElement>('#edit-title')!;
+    title.value = '   ';
+    title.dispatchEvent(new Event('input'));
+    title.dispatchEvent(new Event('blur'));
+    await fixture.whenStable();
+    expect(element.textContent).toContain('Enter a title.');
+  });
+
   it('sends one complete update, locks input and cancel, and navigates only after success', () => {
     load();
     enter('title', 'Updated title');
@@ -87,11 +98,12 @@ describe('BookEditComponent', () => {
     const request = http.expectOne(`${apiUrl}/${book.isbn}`);
     expect(request.request.method).toBe('PUT');
     expect(request.request.body).toEqual({ ...book, title: 'Updated title', coAuthors: ['First', 'Second'] });
-    expect(element.querySelector<HTMLInputElement>('#edit-title')!.disabled).toBeTrue();
-    expect(element.querySelector<HTMLButtonElement>('button[type="button"]')!.disabled).toBeTrue();
+    expect(element.querySelector<HTMLInputElement>('#edit-title')!.disabled).toBe(true);
+    expect(element.querySelector<HTMLButtonElement>('button[type="button"]')!.disabled).toBe(true);
     expect(navigate).not.toHaveBeenCalled();
     request.flush({ ...book, title: 'Updated title' });
-    expect(navigate).toHaveBeenCalledOnceWith(['/books', book.isbn]);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/books', book.isbn]);
   });
 
   it('deletes optional metadata, omitting a cleared date for the API PUT replacement', () => {
@@ -130,7 +142,8 @@ describe('BookEditComponent', () => {
     load();
     enter('title', 'Discard me');
     element.querySelector<HTMLButtonElement>('button[type="button"]')!.click();
-    expect(navigate).toHaveBeenCalledOnceWith(['/books', book.isbn]);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/books', book.isbn]);
     http.expectNone(request => request.method === 'PUT');
   });
 
@@ -142,12 +155,13 @@ describe('BookEditComponent', () => {
     fixture.detectChanges();
     expect(element.querySelector('[role="alert"]')!.textContent).toContain('Unable to save changes');
     expect(element.querySelector<HTMLInputElement>('#edit-title')!.value).toBe('Retry title');
-    expect(element.querySelector<HTMLInputElement>('#edit-title')!.disabled).toBeFalse();
+    expect(element.querySelector<HTMLInputElement>('#edit-title')!.disabled).toBe(false);
     submit();
     const request = http.expectOne(`${apiUrl}/${book.isbn}`);
     expect(request.request.body.title).toBe('Retry title');
     request.flush(request.request.body);
-    expect(navigate).toHaveBeenCalledOnceWith(['/books', book.isbn]);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/books', book.isbn]);
   });
 
   for (const status of [404, 500, 0]) {
@@ -176,7 +190,7 @@ describe('BookEditComponent', () => {
     expect(element.querySelector('[role="alert"]')).toBeNull();
     const slow = http.expectOne(`${apiUrl}/slow`);
     params.next(convertToParamMap({ isbn: 'second' }));
-    expect(slow.cancelled).toBeTrue();
+    expect(slow.cancelled).toBe(true);
     http.expectOne(`${apiUrl}/second`).flush({ ...book, isbn: 'second', title: 'Second title' });
     fixture.detectChanges();
     expect(element.querySelector<HTMLInputElement>('#edit-title')!.value).toBe('Second title');

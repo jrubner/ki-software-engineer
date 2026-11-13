@@ -38,7 +38,7 @@ Follow the repository's service-control and verification instructions. Check wor
 Verify current files before relying on these pointers:
 
 - Application tests live in `tests/` and use Playwright; `tests-examples/` contains unrelated website samples. Reuse the current runner, helpers, and applicable repository commands.
-- `npm test` uses Angular/Karma, while `ARCHITECTURE.md` records a historical missing `karma-jasmine` dependency. A historical report does not establish today's result. If the required unit runner remains blocked, state the exact limitation; do not silently install packages or alter the runner to bypass it.
+- Angular unit tests are colocated under `src/` and run with `npm test -- --watch=false` through Angular 21's Vitest builder and WebdriverIO headless Chrome. Use async Angular stabilization and Vitest timers instead of Zone.js `fakeAsync`. Historical runner reports do not establish today's result; report infrastructure failures precisely without silently changing dependencies or bypassing tests.
 
 ## Hand off the result
 

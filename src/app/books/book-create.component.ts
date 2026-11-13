@@ -1,22 +1,42 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
+import { disabled, FormField, form, min, required, schema, validate } from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { BookApiClient } from './book-api-client.service';
 import { NewBook } from './book';
 
-function nonBlank(control: AbstractControl<string>): ValidationErrors | null {
-  return control.value.trim() ? null : { blank: true };
+interface BookCreateFormModel {
+  isbn: string;
+  title: string;
+  subtitle: string;
+  author: string;
+  publisher: string;
+  numPages: number | null;
+  price: string;
+  cover: string;
+  abstract: string;
+  publishedAt: string;
+  coAuthors: string;
 }
 
-function positiveInteger(control: AbstractControl<number | null>): ValidationErrors | null {
-  return control.value !== null && Number.isInteger(control.value) && control.value > 0 ? null : { pages: true };
-}
+const emptyBook: BookCreateFormModel = {
+  isbn: '',
+  title: '',
+  subtitle: '',
+  author: '',
+  publisher: '',
+  numPages: null,
+  price: '',
+  cover: '',
+  abstract: '',
+  publishedAt: '',
+  coAuthors: ''
+};
 
 @Component({
   selector: 'app-book-create',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [FormField, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './book-create.component.html',
   styleUrl: './book-create.component.css'
@@ -26,29 +46,49 @@ export class BookCreateComponent {
   protected readonly saveError = signal(false);
   protected readonly duplicateIsbn = signal(false);
   protected readonly lookupError = signal(false);
-  protected readonly form = new FormGroup({
-    isbn: new FormControl('', { nonNullable: true, validators: nonBlank }),
-    title: new FormControl('', { nonNullable: true, validators: nonBlank }),
-    subtitle: new FormControl('', { nonNullable: true }),
-    author: new FormControl('', { nonNullable: true, validators: nonBlank }),
-    publisher: new FormControl('', { nonNullable: true }),
-    numPages: new FormControl<number | null>(null, positiveInteger),
-    price: new FormControl('', { nonNullable: true }),
-    cover: new FormControl('', { nonNullable: true }),
-    abstract: new FormControl('', { nonNullable: true }),
-    publishedAt: new FormControl('', { nonNullable: true }),
-    coAuthors: new FormControl('', { nonNullable: true })
-  });
+  private readonly model = signal<BookCreateFormModel>({ ...emptyBook });
+  protected readonly form = form(
+    this.model,
+    schema<BookCreateFormModel>(path => {
+      required(path.isbn);
+      required(path.title);
+      required(path.author);
+      required(path.numPages);
+      min(path.numPages, 1);
+      validate(path.isbn, context => (context.value().trim() ? null : { kind: 'required', message: 'Enter an ISBN.' }));
+      validate(path.title, context =>
+        context.value().trim() ? null : { kind: 'required', message: 'Enter a title.' }
+      );
+      validate(path.author, context =>
+        context.value().trim() ? null : { kind: 'required', message: 'Enter an author.' }
+      );
+      validate(path.numPages, context => {
+        const pages = context.value();
+        return pages !== null && Number.isInteger(pages) && pages > 0
+          ? null
+          : { kind: 'pages', message: 'Enter a positive whole number of pages.' };
+      });
+      disabled(path, () => this.saving());
+    })
+  );
   private readonly api = inject(BookApiClient);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  protected onSubmit(event: Event): void {
+    event.preventDefault();
+    this.save();
+  }
+
   protected save(): void {
     if (this.saving()) return;
-    this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    this.form.isbn().markAsTouched();
+    this.form.title().markAsTouched();
+    this.form.author().markAsTouched();
+    this.form.numPages().markAsTouched();
+    if (this.form().invalid()) return;
 
-    const values = this.form.getRawValue();
+    const values = this.model();
     const isbn = values.isbn.trim();
     const book: NewBook = {
       isbn,
@@ -72,7 +112,6 @@ export class BookCreateComponent {
     this.saveError.set(false);
     this.duplicateIsbn.set(false);
     this.lookupError.set(false);
-    this.form.disable();
 
     this.api
       .getBookByIsbn(isbn)
@@ -86,6 +125,10 @@ export class BookCreateComponent {
       });
   }
 
+  protected onIsbnInput(): void {
+    this.duplicateIsbn.set(false);
+  }
+
   private create(book: NewBook): void {
     this.api
       .createBook(book)
@@ -94,7 +137,6 @@ export class BookCreateComponent {
         next: created => void this.router.navigate(['/books', created.isbn]),
         error: () => {
           this.saving.set(false);
-          this.form.enable();
           this.saveError.set(true);
         }
       });
@@ -102,13 +144,11 @@ export class BookCreateComponent {
 
   private handleDuplicateIsbn(): void {
     this.saving.set(false);
-    this.form.enable();
     this.duplicateIsbn.set(true);
   }
 
   private handleLookupError(): void {
     this.saving.set(false);
-    this.form.enable();
     this.lookupError.set(true);
   }
 

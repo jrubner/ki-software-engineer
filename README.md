@@ -18,6 +18,23 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the current application structure, de
 
 ## Local Development
 
+The application targets Angular 21 and runs without Zone.js. Application forms
+use the experimental Angular 21 Signal Forms API. Use Node 22.23.4+ (22.x) or
+24.22.1+ (24.x) with TypeScript 5.9.x. WebdriverIO 10 sets the stricter Node
+minimum for the test toolchain.
+
+`npm test -- --watch=false` runs the unit suite through Angular's Vitest builder
+in headless Chrome using WebdriverIO (1920 × 1080 viewport). Install Chrome;
+WebdriverIO resolves its matching driver on first use, which requires network
+access. The suite includes real-browser CSS and CDK assertions. It does not run
+the separate Playwright application acceptance suite. Spies are restored between
+tests and automatic failure screenshots are disabled in `vitest-base.config.ts`.
+
+Run `node --test .github/scripts/*.test.cjs` for automation guards,
+`npm run ng -- build --configuration development` for the development build,
+and `npm run build` for production. The production build downloads Google Fonts.
+On Windows use `npm.cmd` where PowerShell script execution is restricted.
+
 | Command       | Description                                      |
 | ------------- | ------------------------------------------------ |
 | `npm install` | Installs the packages to develop the Angular app |

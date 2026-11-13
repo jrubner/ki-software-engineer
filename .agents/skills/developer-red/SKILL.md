@@ -42,7 +42,7 @@ Run relevant existing tests when needed to distinguish new failures from regress
 Check current files before relying on these pointers:
 
 - Application UI tests live in `tests/` and use Playwright. `tests-examples/` contains website samples and does not verify BookMonkey. Follow the current Playwright configuration and applicable repository verification instructions.
-- `npm test` is configured for Angular/Karma, and `tsconfig.spec.json` references Jasmine. `ARCHITECTURE.md` records a historical missing `karma-jasmine` dependency. Confirm the present setup; do not silently repair it as part of a feature's Red phase. If unit tests are needed but cannot execute, prepare the relevant tests and report them as unverified with the concrete blocker.
+- Angular unit tests are colocated under `src/` and run with `npm test -- --watch=false` through Angular 21's Vitest builder and WebdriverIO headless Chrome. Use async Angular stabilization and Vitest timers instead of Zone.js `fakeAsync`. Confirm the current setup; report unavailable Chrome/driver or infrastructure failures separately from behavioral Red and do not silently change dependencies.
 
 ## Hand off to Green
 

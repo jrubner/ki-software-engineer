@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { DestroyRef, Directive, ElementRef, inject, NgZone, OnInit, signal } from '@angular/core';
+import { DestroyRef, Directive, ElementRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
@@ -20,7 +20,6 @@ export class AutoHideHeaderDirective implements OnInit {
   private readonly document = inject(DOCUMENT);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly zone = inject(NgZone);
   private readonly router = inject(Router);
   private lastScroll = 0;
   private travel = 0;
@@ -60,10 +59,8 @@ export class AutoHideHeaderDirective implements OnInit {
       }
     };
 
-    this.zone.runOutsideAngular(() => {
-      window.addEventListener('scroll', onScroll, { passive: true });
-      window.addEventListener('pointermove', onPointerMove, { passive: true });
-    });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
     this.destroyRef.onDestroy(() => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('pointermove', onPointerMove);

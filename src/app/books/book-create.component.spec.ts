@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -23,7 +24,7 @@ const createdBook: Book = {
 describe('BookCreateComponent', () => {
   let fixture: ComponentFixture<BookCreateComponent>;
   let http: HttpTestingController;
-  let navigate: jasmine.Spy;
+  let navigate: Mock;
   let element: HTMLElement;
 
   beforeEach(() => {
@@ -31,7 +32,7 @@ describe('BookCreateComponent', () => {
       imports: [BookCreateComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])]
     });
-    navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(BookCreateComponent);
     element = fixture.nativeElement;
@@ -61,6 +62,11 @@ describe('BookCreateComponent', () => {
     fixture.detectChanges();
   }
 
+  async function submitAndStabilize(): Promise<void> {
+    element.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+  }
+
   function expectMissingIsbn(): void {
     http.expectOne(`${apiUrl}/${createdBook.isbn}`).flush({}, { status: 404, statusText: 'Not Found' });
   }
@@ -79,9 +85,7 @@ describe('BookCreateComponent', () => {
       'date',
       'coauthors'
     ]) {
-      expect(element.querySelector(`#create-${id}`))
-        .withContext(id)
-        .not.toBeNull();
+      expect(element.querySelector(`#create-${id}`), id).not.toBeNull();
     }
     expect(element.querySelector<HTMLTextAreaElement>('#create-coauthors')!.getAttribute('rows')).toBe('3');
     expect(element.textContent).toContain('One name per line.');
@@ -134,11 +138,12 @@ describe('BookCreateComponent', () => {
       userId: 1,
       coAuthors: ['First Writer', 'Second Writer']
     });
-    expect(element.querySelector<HTMLInputElement>('#create-title')!.disabled).toBeTrue();
-    expect(element.querySelector<HTMLButtonElement>('button[type="button"]')!.disabled).toBeTrue();
+    expect(element.querySelector<HTMLInputElement>('#create-title')!.disabled).toBe(true);
+    expect(element.querySelector<HTMLButtonElement>('button[type="button"]')!.disabled).toBe(true);
     expect(navigate).not.toHaveBeenCalled();
     request.flush({ ...createdBook, isbn: '9780000000002' });
-    expect(navigate).toHaveBeenCalledOnceWith(['/books', '9780000000002']);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/books', '9780000000002']);
   });
 
   it('shows a duplicate ISBN error without posting when the ISBN already exists', () => {
@@ -150,6 +155,28 @@ describe('BookCreateComponent', () => {
     expect(element.querySelector<HTMLInputElement>('#create-isbn')!.getAttribute('aria-invalid')).toBe('true');
     http.expectNone(request => request.method === 'POST');
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('clears a duplicate ISBN error when edited and allows a corrected ISBN to be submitted', async () => {
+    enterValidBook();
+    await fixture.whenStable();
+    await submitAndStabilize();
+    http.expectOne(`${apiUrl}/${createdBook.isbn}`).flush(createdBook);
+    await fixture.whenStable();
+    expect(element.querySelector('#isbn-error')!.textContent).toContain('already exists');
+
+    enter('isbn', '9780000000002');
+    await fixture.whenStable();
+    expect(element.querySelector('#isbn-error')!.textContent).not.toContain('already exists');
+    expect(element.querySelector<HTMLInputElement>('#create-isbn')!.getAttribute('aria-invalid')).toBe('false');
+
+    await submitAndStabilize();
+    http.expectOne(`${apiUrl}/9780000000002`).flush({}, { status: 404, statusText: 'Not Found' });
+    const post = http.expectOne(apiUrl);
+    expect(post.request.body.isbn).toBe('9780000000002');
+    post.flush({ ...createdBook, isbn: '9780000000002' });
+    await fixture.whenStable();
+    expect(navigate).toHaveBeenCalledWith(['/books', '9780000000002']);
   });
 
   for (const status of [500, 0]) {
@@ -177,7 +204,8 @@ describe('BookCreateComponent', () => {
     const post = http.expectOne(apiUrl);
     expect(post.request.body.title).toBe('New title');
     post.flush(createdBook);
-    expect(navigate).toHaveBeenCalledOnceWith(['/books', createdBook.isbn]);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/books', createdBook.isbn]);
   });
 
   it('retains values and allows retry after POST failure', () => {
@@ -194,13 +222,15 @@ describe('BookCreateComponent', () => {
     const retry = http.expectOne(apiUrl);
     expect(retry.request.body.title).toBe('New title');
     retry.flush(createdBook);
-    expect(navigate).toHaveBeenCalledOnceWith(['/books', createdBook.isbn]);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/books', createdBook.isbn]);
   });
 
   it('cancels to the collection without checking or creating a book', () => {
     enterValidBook();
     element.querySelector<HTMLButtonElement>('button[type="button"]')!.click();
-    expect(navigate).toHaveBeenCalledOnceWith(['/']);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(['/']);
     http.expectNone(() => true);
   });
 });

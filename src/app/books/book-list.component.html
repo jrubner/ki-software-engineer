@@ -27,12 +27,12 @@
       <input
         id="book-search"
         type="text"
-        [(ngModel)]="searchTerm"
-        (ngModelChange)="onSearchChange()"
+        [formField]="searchForm.term"
+        (input)="onSearchChange($event)"
         placeholder="Search for books..."
         class="min-w-0 w-full appearance-none border-none bg-transparent py-4 text-base text-ink placeholder:text-muted focus:outline-none"
       />
-      @if (searchTerm()) {
+      @if (searchModel().term) {
         <button (click)="clearSearch()" aria-label="Clear search" class="icon-button">
           <svg aria-hidden="true" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -83,12 +83,12 @@
             />
           </svg>
           <p class="text-xl font-semibold text-ink mb-2">
-            {{ searchTerm() ? 'No books match your search' : 'No books available' }}
+            {{ searchModel().term ? 'No books match your search' : 'No books available' }}
           </p>
           <p class="text-muted">
-            {{ searchTerm() ? 'Try different search terms or clear the search' : 'Check back later' }}
+            {{ searchModel().term ? 'Try different search terms or clear the search' : 'Check back later' }}
           </p>
-          @if (searchTerm()) {
+          @if (searchModel().term) {
             <button (click)="clearSearch()" class="button-primary mt-6">Clear Search</button>
           }
         </div>
@@ -107,11 +107,11 @@
       >
         Previous
       </button>
-      <p aria-live="polite" class="text-sm font-medium text-ink">Page {{ page() }} of {{ totalPages }}</p>
+      <p aria-live="polite" class="text-sm font-medium text-ink">Page {{ page() }} of {{ totalPages() }}</p>
       <button
         type="button"
         (click)="goToPage(page() + 1)"
-        [disabled]="loading() || page() >= totalPages"
+        [disabled]="loading() || page() >= totalPages()"
         class="rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink transition hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         Next

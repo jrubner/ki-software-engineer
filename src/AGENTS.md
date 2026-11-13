@@ -1,6 +1,8 @@
 # Source instructions
 
 - Preserve the standalone Angular architecture, strict TypeScript, and strict template checking. Use installed Angular/RxJS features without adding state libraries or production dependencies for routine changes.
+- Angular 21 runs zoneless. Use signals or Angular notification APIs for asynchronous UI changes; do not add Zone.js or `fakeAsync`. Application forms use the explicitly adopted experimental Angular 21 Signal Forms API with `FormField` bindings and schema validation. Native submit handlers must prevent default navigation.
+- Unit tests use Vitest through `@angular/build:unit-test` with WebdriverIO headless Chrome. Prefer `fixture.whenStable()` to prove asynchronous rendering; forced rendering must not hide missing zoneless notifications. Keep browser-dependent CSS/CDK assertions in browser mode.
 - Follow `.prettierrc`. Keep short templates inline when useful; use a colocated HTML template for substantial multi-section views. Template extraction must preserve bindings, semantics, text, and styling.
 - Keep HTTP transport in API services and presentation in components. Use explicit view states when loading and errors matter to the user. Do not hide expected feature-specific errors behind a global handler or duplicate notifications.
 - Sequence replaceable requests with RxJS cancellation and keep errors inside the request stream when future inputs must continue working. Use `AsyncPipe`, `takeUntilDestroyed`, or explicit destruction cleanup for subscriptions/listeners/timers.

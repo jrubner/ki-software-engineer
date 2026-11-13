@@ -1,3 +1,4 @@
+import type { MockedObject } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, Subject, throwError } from 'rxjs';
 import { Book } from '../books/book';
@@ -19,12 +20,14 @@ describe('ReadingListStore', () => {
   });
 
   let store: ReadingListStore;
-  let api: jasmine.SpyObj<BookApiClient>;
+  let api: MockedObject<Pick<BookApiClient, 'getBookByIsbn'>>;
 
   beforeEach(() => {
     localStorage.clear();
-    api = jasmine.createSpyObj<BookApiClient>('BookApiClient', ['getBookByIsbn']);
-    api.getBookByIsbn.and.callFake(isbn => of(makeBook(isbn)));
+    api = {
+      getBookByIsbn: vi.fn().mockName('BookApiClient.getBookByIsbn')
+    };
+    api.getBookByIsbn.mockImplementation(isbn => of(makeBook(isbn)));
     TestBed.configureTestingModule({
       providers: [ReadingListStore, { provide: BookApiClient, useValue: api }]
     });
@@ -38,8 +41,8 @@ describe('ReadingListStore', () => {
     store.add(book);
     store.add({ ...book, title: 'Changed duplicate' });
 
-    expect(store.has('978-1')).toBeTrue();
-    expect(store.entries()).toEqual([jasmine.objectContaining({ isbn: '978-1', status: 'want-to-read', order: 0 })]);
+    expect(store.has('978-1')).toBe(true);
+    expect(store.entries()).toEqual([expect.objectContaining({ isbn: '978-1', status: 'want-to-read', order: 0 })]);
     expect(store.entries()[0].book.id).toBe('database-id');
   });
 
@@ -66,8 +69,8 @@ describe('ReadingListStore', () => {
     ]);
     const persisted = JSON.parse(localStorage.getItem('reading-list:v1')!);
     expect(persisted.entries).toEqual([
-      jasmine.objectContaining({ isbn: '978-2', status: 'want-to-read', order: 0, book: jasmine.any(Object) }),
-      jasmine.objectContaining({ isbn: '978-1', status: 'currently-reading', order: 0, book: jasmine.any(Object) })
+      expect.objectContaining({ isbn: '978-2', status: 'want-to-read', order: 0, book: expect.any(Object) }),
+      expect.objectContaining({ isbn: '978-1', status: 'currently-reading', order: 0, book: expect.any(Object) })
     ]);
   });
 
@@ -82,7 +85,7 @@ describe('ReadingListStore', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [ReadingListStore, { provide: BookApiClient, useValue: api }] });
     const restored = TestBed.inject(ReadingListStore);
-    expect(restored.has('978-2')).toBeFalse();
+    expect(restored.has('978-2')).toBe(false);
     expect(restored.entries().map(entry => [entry.isbn, entry.status, entry.order])).toEqual([
       ['978-3', 'want-to-read', 0],
       ['978-1', 'read', 0]
@@ -93,8 +96,8 @@ describe('ReadingListStore', () => {
 
   it('cancels refresh on removal so a re-added book cannot receive stale metadata', () => {
     const response = new Subject<Book>();
-    const cancelled = jasmine.createSpy('cancelled');
-    api.getBookByIsbn.and.returnValue(
+    const cancelled = vi.fn();
+    api.getBookByIsbn.mockReturnValue(
       new Observable(subscriber => {
         const subscription = response.subscribe(subscriber);
         return () => {
@@ -126,11 +129,11 @@ describe('ReadingListStore', () => {
     const restored = TestBed.inject(ReadingListStore);
 
     expect(restored.entries()).toEqual([
-      jasmine.objectContaining({
+      expect.objectContaining({
         isbn: '978-1',
         status: 'read',
         order: 2,
-        book: jasmine.objectContaining({ id: 'api-id' })
+        book: expect.objectContaining({ id: 'api-id' })
       })
     ]);
   });
@@ -138,17 +141,17 @@ describe('ReadingListStore', () => {
   it('refreshes by ISBN and updates book metadata while keeping current status and order', () => {
     store.add(makeBook('978-1', 'local-id', 'Old title'));
     store.move('978-1', 'currently-reading', 0);
-    api.getBookByIsbn.and.returnValue(of(makeBook('978-1', 'fresh-id', 'Fresh title')));
+    api.getBookByIsbn.mockReturnValue(of(makeBook('978-1', 'fresh-id', 'Fresh title')));
 
     store.refresh();
 
     expect(api.getBookByIsbn).toHaveBeenCalledWith('978-1');
     expect(store.entries()[0]).toEqual(
-      jasmine.objectContaining({
+      expect.objectContaining({
         isbn: '978-1',
         status: 'currently-reading',
         order: 0,
-        book: jasmine.objectContaining({ title: 'Fresh title' })
+        book: expect.objectContaining({ title: 'Fresh title' })
       })
     );
     store.move('978-1', 'read', 0);
@@ -157,18 +160,18 @@ describe('ReadingListStore', () => {
 
   it('retains saved metadata and ordering on refresh errors and allows retry', () => {
     store.add(makeBook('978-1', 'local-id', 'Saved title'));
-    api.getBookByIsbn.and.returnValue(throwError(() => ({ status: 404 })));
+    api.getBookByIsbn.mockReturnValue(throwError(() => ({ status: 404 })));
     store.refresh();
 
     expect(store.entries()[0]).toEqual(
-      jasmine.objectContaining({
+      expect.objectContaining({
         isbn: '978-1',
         order: 0,
-        book: jasmine.objectContaining({ title: 'Saved title' }),
-        error: jasmine.anything()
+        book: expect.objectContaining({ title: 'Saved title' }),
+        error: expect.anything()
       })
     );
-    api.getBookByIsbn.and.returnValue(of(makeBook('978-1', 'fresh-id', 'Recovered title')));
+    api.getBookByIsbn.mockReturnValue(of(makeBook('978-1', 'fresh-id', 'Recovered title')));
     store.retry('978-1');
     expect(store.entries()[0].book.title).toBe('Recovered title');
     expect(store.entries()[0].error).toBeFalsy();
@@ -177,17 +180,17 @@ describe('ReadingListStore', () => {
   it('does not let an in-flight refresh overwrite a move', () => {
     const response = new Subject<Book>();
     store.add(makeBook('978-1'));
-    api.getBookByIsbn.and.returnValue(response.asObservable());
+    api.getBookByIsbn.mockReturnValue(response.asObservable());
     store.refresh();
     store.move('978-1', 'read', 0);
     response.next(makeBook('978-1', 'api-id', 'Fresh title'));
 
     expect(store.entries()[0]).toEqual(
-      jasmine.objectContaining({
+      expect.objectContaining({
         isbn: '978-1',
         status: 'read',
         order: 0,
-        book: jasmine.objectContaining({ title: 'Fresh title' })
+        book: expect.objectContaining({ title: 'Fresh title' })
       })
     );
   });
@@ -197,12 +200,12 @@ describe('ReadingListStore', () => {
     const first = new Observable<Book>(() => () => (firstUnsubscribed = true));
     const second = new Subject<Book>();
     store.add(makeBook('978-1'));
-    api.getBookByIsbn.and.returnValues(first, second);
+    api.getBookByIsbn.mockReturnValueOnce(first).mockReturnValueOnce(second);
     store.refresh();
     store.refresh();
     second.next(makeBook('978-1', 'new-id', 'Latest title'));
 
-    expect(firstUnsubscribed).toBeTrue();
+    expect(firstUnsubscribed).toBe(true);
     expect(store.entries()[0].book.title).toBe('Latest title');
   });
 
@@ -213,7 +216,7 @@ describe('ReadingListStore', () => {
     const restored = TestBed.inject(ReadingListStore);
     expect(restored.storageNotice()).toBeTruthy();
     restored.add(makeBook('978-1'));
-    expect(restored.has('978-1')).toBeTrue();
+    expect(restored.has('978-1')).toBe(true);
   });
 
   it('ignores invalid stored entry shapes and continues with an in-memory board', () => {
@@ -228,19 +231,23 @@ describe('ReadingListStore', () => {
     expect(restored.entries()).toEqual([]);
     expect(restored.storageNotice()).toBeTruthy();
     restored.add(makeBook('978-2'));
-    expect(restored.has('978-2')).toBeTrue();
+    expect(restored.has('978-2')).toBe(true);
   });
 
   it('continues in memory when local storage reads and writes throw', () => {
-    spyOn(Storage.prototype, 'getItem').and.throwError('unavailable');
-    spyOn(Storage.prototype, 'setItem').and.throwError('unavailable');
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('unavailable');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('unavailable');
+    });
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [ReadingListStore, { provide: BookApiClient, useValue: api }] });
     const memoryOnly = TestBed.inject(ReadingListStore);
 
     memoryOnly.add(makeBook('978-1'));
 
-    expect(memoryOnly.has('978-1')).toBeTrue();
+    expect(memoryOnly.has('978-1')).toBe(true);
     expect(memoryOnly.storageNotice()).toBeTruthy();
   });
 });
