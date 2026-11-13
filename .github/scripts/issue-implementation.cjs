@@ -266,7 +266,12 @@ function applicationTests(root = process.cwd()) {
   return tests.sort();
 }
 
-function runApplicationTests(root = process.cwd()) {
+function runApplicationTests(root = process.cwd(), args = []) {
+  const env = { ...process.env };
+  if ('NO_COLOR' in env) {
+    env.FORCE_COLOR = '0';
+    delete env.NO_COLOR;
+  }
   execFileSync(
     process.execPath,
     [
@@ -275,9 +280,9 @@ function runApplicationTests(root = process.cwd()) {
       ...applicationTests(root),
       '--project=chromium',
       '--workers=1',
-      '--reporter=line'
+      ...args
     ],
-    { cwd: root, stdio: 'inherit' }
+    { cwd: root, stdio: 'inherit', env }
   );
 }
 
@@ -298,6 +303,6 @@ module.exports = {
 
 if (require.main === module) {
   if (process.argv[2] === 'apply') applyResult(process.env.CODEX_RESULT);
-  else if (process.argv[2] === 'test') runApplicationTests();
+  else if (process.argv[2] === 'test') runApplicationTests(process.cwd(), process.argv.slice(3));
   else throw new Error('Expected apply or test.');
 }

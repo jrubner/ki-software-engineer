@@ -701,3 +701,70 @@ separate acceptance layer and were not executed for this upgrade.
   automatic Vitest failure captures were removed before disabling that feature.
   No screenshots are retained. Verification completed before the user separately
   authorized commit, push and PR creation; merge requires separate authorization.
+
+## Playwright acceptance conventions (2026-11-13)
+
+`tests/AGENTS.md` scopes acceptance-test rules to the existing test directory:
+semantic locators, deterministic API interception, isolated state, observable
+outcomes, and feature-specific scenarios. The ten scenarios in
+`tests/book-list.spec.ts` cover first-page rendering, ISBN links, pagination and
+loading locks, search debounce and page reset, clearing search by both input and
+button, empty collection/results, and retry after HTTP, network, or pagination
+header failures. The edit suite now mocks editorial recommendations separately
+and excludes that query from its collection-independence assertion.
+
+`npm run test:e2e` uses the existing recursive application-spec discovery and
+serial Chromium runner; the external website example remains excluded. The
+runner now respects the configured console and HTML reporters instead of
+overriding them. Desktop projects use a 1920 × 1080 viewport; individual mobile
+scenarios can still override it. Screenshots are disabled. HTML reports remain
+local ignored artifacts, with automatic opening disabled. Repository validation
+and implementation verification upload them even after test failure, unless
+the workflow is cancelled, retaining them for seven days. These changes add no
+application behavior or dependencies. Book-creation and reading-list acceptance
+journeys remain outside this first implementation step.
+
+Verification: the complete Chromium application run passed 82 of 83 cases; its
+only failure exposed the edit suite's recommendation-query counting issue
+described above. After correcting that fixture, all 26 book-list and book-edit
+cases passed, covering the previously failing case and all ten new scenarios.
+The 61 automation guards, scoped TypeScript check, formatting, and whitespace
+checks passed. The local HTML report was generated successfully. Live CI artifact
+upload, Firefox, WebKit, and standalone production builds were not exercised.
+
+### Headed execution and game-test scope (2026-11-13)
+
+The application runner now forwards arguments following npm's `--` separator.
+`npm run test:e2e:headed` is the direct visible-browser alias. Headed execution
+requires full Chromium; installing only the headless shell does not supply it.
+The runner translates inherited `NO_COLOR` into `FORCE_COLOR=0` for its child
+process so Playwright's color defaults cannot produce conflicting-variable
+warnings. A runner regression test verifies forwarded arguments and environment.
+
+Five pure slot-engine cases were removed from Playwright because the same
+assertions already exist in `src/app/gamba/slot-engine.spec.ts`. The scatter UI
+journey now verifies the award, retrigger, preserved symbol, expansion, and free
+bet accounting using one representative subsequent spin instead of replaying
+all nineteen. Bonus completion and restored controls remain covered by the
+autospin bonus journey. Three outcome-only autospin tests use a page-local native
+animation playback rate of 20; real motion tests retain original timing.
+Dialog-centering assertions use the document's available client dimensions,
+excluding Windows headed-browser scrollbars, while retaining their pixel
+tolerance. No production code or game timings were changed.
+
+The Angular unit suite uses its existing WebdriverIO headless Chrome provider;
+neither its configuration nor application dependencies changed in this task.
+Native Chrome USB-descriptor errors and TensorFlow Lite/XNNPACK initialization
+messages are browser-process diagnostics, not application test assertions.
+
+Final verification: all 78 Chromium application cases passed headless in
+172.9 seconds with no retries, skips, or flaky results. The shortened scatter
+journey took 16.3 seconds; the three accelerated autospin cases took 2.3, 5.7,
+and 2.3 seconds. In the headed run, the two scrollbar-sensitive assertions
+failed before correction and one existing hover-reveal case failed once; all
+three passed in a targeted headed rerun (31 seconds). The hover test required
+no code change and also passed in the final headless run. All 106 Angular unit
+tests and 62 automation guards passed. Scoped TypeScript, formatting, and
+whitespace checks passed; HTML and local JSON reports were generated without
+screenshots. No Playwright browser processes remained after completion. Live CI
+upload, Firefox, WebKit, and standalone production builds remain unverified.
